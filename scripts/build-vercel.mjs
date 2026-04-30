@@ -50,14 +50,35 @@ await writeFile(
 )
 
 // 4) Function entry — bridges Vercel's Node (req, res) to TanStack Start's
-//    Web Fetch handler. Without this bridge, server.fetch() would receive an
-//    IncomingMessage instead of a Request and crash.
+//    Web Fetch handler. The server module is imported dynamically so import
+//    errors surface in the response instead of crashing the whole function.
 await writeFile(
   path.join(fn, 'index.mjs'),
-  `import server from './server/server.js'
-import { Buffer } from 'node:buffer'
+  `import { Buffer } from 'node:buffer'
+
+let serverPromise
+function loadServer() {
+  if (!serverPromise) {
+    serverPromise = import('./server/server.js').then((m) => m.default)
+  }
+  return serverPromise
+}
 
 export default async function handler(req, res) {
+  let server
+  try {
+    server = await loadServer()
+  } catch (err) {
+    console.error('Failed to load SSR module:', err)
+    res.statusCode = 500
+    res.setHeader('content-type', 'text/plain; charset=utf-8')
+    res.end(
+      'SSR module failed to load\\n\\n' +
+        (err && err.stack ? err.stack : String(err)),
+    )
+    return
+  }
+
   try {
     const protocol = req.headers['x-forwarded-proto'] || 'https'
     const host = req.headers['x-forwarded-host'] || req.headers.host
@@ -102,7 +123,10 @@ export default async function handler(req, res) {
     console.error('SSR handler crashed:', err)
     res.statusCode = 500
     res.setHeader('content-type', 'text/plain; charset=utf-8')
-    res.end('Internal Server Error\\n\\n' + (err && err.stack ? err.stack : String(err)))
+    res.end(
+      'SSR handler crashed\\n\\n' +
+        (err && err.stack ? err.stack : String(err)),
+    )
   }
 }
 `,
