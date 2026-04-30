@@ -18,17 +18,31 @@ export const syncUser = createServerFn({ method: 'POST' }).handler(async (): Pro
   const email = clerkUser.emailAddresses[0]?.emailAddress ?? ''
   const name = [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(' ') || email
 
+  // ADMIN_EMAILS is authoritative: any email listed there is ADMIN on every
+  // sync, regardless of what the DB currently says. This prevents accidental
+  // demotions and guarantees admin access after DB resets / fresh deploys.
+  // For emails NOT in the list, the DB role is preserved.
+  const adminEmails = getAdminEmails()
+  const isListedAdmin = adminEmails.includes(email.toLowerCase())
+
   const existing = await prisma.user.findUnique({ where: { clerkId } })
   if (existing) {
-    if (existing.name === name && existing.email === email) {
+    const targetRole = isListedAdmin ? 'ADMIN' : existing.role
+    if (
+      existing.name === name &&
+      existing.email === email &&
+      existing.role === targetRole
+    ) {
       return toAppUser(existing)
     }
-    const updated = await prisma.user.update({ where: { clerkId }, data: { name, email } })
+    const updated = await prisma.user.update({
+      where: { clerkId },
+      data: { name, email, role: targetRole },
+    })
     return toAppUser(updated)
   }
 
-  const adminEmails = getAdminEmails()
-  const role = adminEmails.includes(email.toLowerCase()) ? 'ADMIN' : 'EMPLOYEE'
+  const role = isListedAdmin ? 'ADMIN' : 'EMPLOYEE'
   const created = await prisma.user.create({
     data: { clerkId, name, email, role },
   })
