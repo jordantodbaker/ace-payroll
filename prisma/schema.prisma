@@ -1,0 +1,50 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  EMPLOYEE
+}
+
+model User {
+  id          String      @id @default(cuid())
+  clerkId     String      @unique
+  name        String
+  email       String      @unique
+  role        Role        @default(EMPLOYEE)
+  hourlyRate  Decimal     @default(0) @db.Decimal(10, 2)
+  createdAt   DateTime    @default(now())
+  timeEntries TimeEntry[]
+}
+
+model Task {
+  id          String      @id @default(cuid())
+  name        String      @unique
+  description String?
+  poNumber    String?
+  active      Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  timeEntries TimeEntry[]
+}
+
+model TimeEntry {
+  id         String    @id @default(cuid())
+  userId     String
+  taskId     String?
+  taskName   String
+  startTime  DateTime
+  endTime    DateTime?
+  totalHours Decimal?  @db.Decimal(10, 4)
+  notes      String?
+  approved   Boolean   @default(false)
+  flagged    Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task       Task?     @relation(fields: [taskId], references: [id], onDelete: SetNull)
+}
