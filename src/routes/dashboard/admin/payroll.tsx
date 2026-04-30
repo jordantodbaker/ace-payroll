@@ -80,8 +80,8 @@ function PayrollPage() {
   }
 
   return (
-    <div className="p-8 max-w-5xl">
-      <div className="flex items-center justify-between mb-8">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-5xl">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6 lg:mb-8">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Payroll</h1>
           <p className="text-sm text-gray-500 mt-1">Calculate and export payroll for any period</p>
@@ -89,7 +89,8 @@ function PayrollPage() {
         <div className="flex gap-2">
           <Button variant="secondary" onClick={handleExport} disabled={!summary || summary.employees.length === 0}>
             <Download className="w-4 h-4" />
-            Export CSV
+            <span className="hidden sm:inline">Export CSV</span>
+            <span className="sm:hidden">CSV</span>
           </Button>
           <Button
             variant="secondary"
@@ -97,13 +98,14 @@ function PayrollPage() {
             disabled={!summary || summary.employees.length === 0}
           >
             <FileText className="w-4 h-4" />
-            Export PDF
+            <span className="hidden sm:inline">Export PDF</span>
+            <span className="sm:hidden">PDF</span>
           </Button>
         </div>
       </div>
 
       {/* Date range + PO filter controls */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+      <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 mb-6">
         <div className="flex flex-wrap gap-3 items-end">
           <Input
             label="Start Date"
@@ -168,20 +170,20 @@ function PayrollPage() {
 
       {/* Summary totals */}
       {summary && (
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-6">
+          <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
             <p className="text-sm text-gray-500 mb-1">Total Hours</p>
-            <p className="text-2xl font-bold text-gray-900">{formatHours(summary.totalHours)}</p>
+            <p className="text-xl sm:text-2xl font-bold text-gray-900">{formatHours(summary.totalHours)}</p>
           </div>
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
             <p className="text-sm text-gray-500 mb-1">Total Gross Pay</p>
-            <p className="text-2xl font-bold text-gray-900">{formatCurrency(summary.totalGrossPay)}</p>
+            <p className="text-xl sm:text-2xl font-bold text-gray-900">{formatCurrency(summary.totalGrossPay)}</p>
           </div>
         </div>
       )}
 
       {/* Results table */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
         {isLoading ? (
           <div className="animate-pulse space-y-3">
             {[1, 2, 3].map((i) => <div key={i} className="h-12 bg-gray-100 rounded" />)}

@@ -17,13 +17,13 @@ function EmployeesPage() {
   })
 
   return (
-    <div className="p-8 max-w-5xl">
-      <div className="mb-8">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-5xl">
+      <div className="mb-6 lg:mb-8">
         <h1 className="text-2xl font-bold text-gray-900">Employees</h1>
         <p className="text-sm text-gray-500 mt-1">{users.length} team members</p>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
         {isLoading ? (
           <div className="animate-pulse space-y-3">
             {[1, 2, 3].map((i) => <div key={i} className="h-12 bg-gray-100 rounded" />)}

@@ -20,19 +20,20 @@ function TimeLog() {
   })
 
   return (
-    <div className="p-8 max-w-5xl">
-      <div className="flex items-center justify-between mb-8">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-5xl">
+      <div className="flex items-center justify-between gap-3 mb-6 lg:mb-8">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">My Time Log</h1>
           <p className="text-sm text-gray-500 mt-1">{entries.length} total entries</p>
         </div>
         <Button onClick={() => setShowAdd(true)}>
           <Plus className="w-4 h-4" />
-          Add Entry
+          <span className="hidden sm:inline">Add Entry</span>
+          <span className="sm:hidden">Add</span>
         </Button>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
         {isLoading ? (
           <div className="animate-pulse space-y-3">
             {[1, 2, 3, 4, 5].map((i) => <div key={i} className="h-10 bg-gray-100 rounded" />)}

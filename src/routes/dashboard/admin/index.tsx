@@ -28,13 +28,13 @@ function AdminOverview() {
   const userMap = Object.fromEntries(users.map((u) => [u.id, u.name]))
 
   return (
-    <div className="p-8 max-w-6xl">
-      <div className="mb-8">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-6xl">
+      <div className="mb-6 lg:mb-8">
         <h1 className="text-2xl font-bold text-gray-900">Admin Overview</h1>
         <p className="text-sm text-gray-500 mt-1">Team summary and recent activity</p>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 lg:mb-8">
         <StatCard
           label="Employees"
           value={String(users.filter((u) => u.role === 'EMPLOYEE').length)}
@@ -59,7 +59,7 @@ function AdminOverview() {
         />
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
         <h2 className="font-semibold text-gray-900 mb-4">Recent Time Entries</h2>
         {isLoading ? (
           <div className="animate-pulse space-y-3">

@@ -34,19 +34,20 @@ function EmployeeDashboard() {
   const completedEntries = entries.filter((e) => e.endTime)
 
   return (
-    <div className="p-8 max-w-5xl">
-      <div className="flex items-center justify-between mb-8">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-5xl">
+      <div className="flex items-center justify-between gap-3 mb-6 lg:mb-8">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">My Dashboard</h1>
           <p className="text-sm text-gray-500 mt-1">{format(now, 'MMMM yyyy')} pay period</p>
         </div>
         <Button onClick={() => setShowAddEntry(true)}>
           <Plus className="w-4 h-4" />
-          Add Entry
+          <span className="hidden sm:inline">Add Entry</span>
+          <span className="sm:hidden">Add</span>
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6 lg:mb-8">
         <StatCard
           label="Hours This Month"
           value={formatHours(paySummary?.totalHours ?? 0)}
@@ -64,11 +65,11 @@ function EmployeeDashboard() {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 lg:mb-8">
         <div className="lg:col-span-1">
           <ClockInOut />
         </div>
-        <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 p-6">
+        <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
           <h2 className="font-semibold text-gray-900 mb-4">Recent Time Entries</h2>
           {isLoading ? (
             <div className="animate-pulse space-y-3">

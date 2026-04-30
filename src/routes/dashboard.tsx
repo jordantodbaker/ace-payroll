@@ -1,4 +1,6 @@
 import { createFileRoute, Outlet, redirect } from '@tanstack/react-router'
+import { useState } from 'react'
+import { Clock, Menu } from 'lucide-react'
 import { syncUser } from '#/server/users'
 import { Sidebar } from '#/components/layout/Sidebar'
 
@@ -25,11 +27,30 @@ export const Route = createFileRoute('/dashboard')({
 
 function DashboardLayout() {
   const { user } = Route.useRouteContext()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
-    <div className="flex min-h-screen">
-      <Sidebar role={user.role} />
-      <main className="flex-1 ml-64 min-h-screen">
+    <div className="min-h-screen">
+      <Sidebar role={user.role} open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+
+      {/* Mobile top bar — hidden on lg+ where the sidebar is permanent */}
+      <header className="lg:hidden sticky top-0 z-30 flex items-center justify-between gap-2 bg-white border-b border-gray-200 px-4 py-3">
+        <button
+          type="button"
+          onClick={() => setSidebarOpen(true)}
+          className="p-2 -ml-2 rounded-md text-gray-700 hover:bg-gray-100"
+          aria-label="Open menu"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+        <div className="flex items-center gap-2">
+          <Clock className="w-5 h-5 text-indigo-600" />
+          <span className="font-semibold text-gray-900">PayrollApp</span>
+        </div>
+        <div className="w-9" aria-hidden="true" />
+      </header>
+
+      <main className="lg:ml-64 min-h-screen">
         <Outlet />
       </main>
     </div>
