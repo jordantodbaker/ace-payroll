@@ -1,24 +1,11 @@
 import { createServerFn } from '@tanstack/react-start'
-import { auth } from '@clerk/tanstack-react-start/server'
 import { z } from 'zod'
 import { prisma } from '#/lib/prisma'
+import { requireAdmin, requireClerkUserId } from '#/server/auth-helpers'
 import type { AppTask } from '#/lib/types'
 
-async function requireAuth() {
-  const { userId } = await auth()
-  if (!userId) throw new Error('Unauthorized')
-  return userId
-}
-
-async function requireAdmin() {
-  const clerkId = await requireAuth()
-  const user = await prisma.user.findUnique({ where: { clerkId } })
-  if (!user || user.role !== 'ADMIN') throw new Error('Forbidden: admin only')
-  return user
-}
-
 export const getTasks = createServerFn().handler(async (): Promise<AppTask[]> => {
-  await requireAuth()
+  await requireClerkUserId()
   return prisma.task.findMany({ where: { active: true }, orderBy: { name: 'asc' } })
 })
 

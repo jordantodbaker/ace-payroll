@@ -1,66 +1,59 @@
 import { createServerFn } from '@tanstack/react-start'
-import { auth } from '@clerk/tanstack-react-start/server'
 import { z } from 'zod'
 import { prisma } from '#/lib/prisma'
+import { requireAdmin, requireUser } from '#/server/auth-helpers'
+import { toAppTimeEntry } from '#/server/serialize'
+import { timeEntryDateRangeWhere } from '#/server/date-range'
 import type { AppTimeEntry, AppTimeEntryWithUser, AppTimeEntryWithTask } from '#/lib/types'
 
-function toEntry(e: {
-  id: string; userId: string; taskId: string | null; taskName: string
-  startTime: Date; endTime: Date | null; totalHours: { toNumber(): number } | number | null
-  notes: string | null; approved: boolean; flagged: boolean; createdAt: Date
-}): AppTimeEntry {
-  return { ...e, totalHours: e.totalHours != null ? (typeof e.totalHours === 'number' ? e.totalHours : e.totalHours.toNumber()) : null }
-}
-
-async function requireAuth() {
-  const { userId } = await auth()
-  if (!userId) throw new Error('Unauthorized')
-  const user = await prisma.user.findUnique({ where: { clerkId: userId } })
-  if (!user) throw new Error('User not found — please reload the dashboard')
-  return user
-}
-
-async function requireAdmin() {
-  const user = await requireAuth()
-  if (user.role !== 'ADMIN') throw new Error('Forbidden: admin only')
-  return user
-}
-
 export const getMyTimeEntries = createServerFn().handler(async (): Promise<AppTimeEntryWithTask[]> => {
-  const user = await requireAuth()
+  const user = await requireUser()
   const entries = await prisma.timeEntry.findMany({
     where: { userId: user.id },
     orderBy: { startTime: 'desc' },
     include: { task: { select: { name: true } } },
   })
-  return entries.map((e) => ({ ...toEntry(e), task: e.task }))
+  return entries.map((e) => ({ ...toAppTimeEntry(e), task: e.task }))
 })
 
-export const getAllTimeEntries = createServerFn().handler(async (): Promise<AppTimeEntryWithUser[]> => {
-  await requireAdmin()
-  const entries = await prisma.timeEntry.findMany({
-    orderBy: { startTime: 'desc' },
-    include: {
-      user: { select: { name: true, email: true } },
-      task: { select: { name: true } },
-    },
+const ListAllSchema = z.object({
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  limit: z.number().int().min(1).max(500).optional(),
+}).optional()
+
+export const getAllTimeEntries = createServerFn({ method: 'POST' })
+  .inputValidator(ListAllSchema)
+  .handler(async ({ data }): Promise<AppTimeEntryWithUser[]> => {
+    await requireAdmin()
+    const where = data?.startDate && data?.endDate
+      ? timeEntryDateRangeWhere(data.startDate, data.endDate)
+      : {}
+    const entries = await prisma.timeEntry.findMany({
+      where,
+      orderBy: { startTime: 'desc' },
+      take: data?.limit ?? 100,
+      include: {
+        user: { select: { name: true, email: true } },
+        task: { select: { name: true } },
+      },
+    })
+    return entries.map((e) => ({ ...toAppTimeEntry(e), user: e.user, task: e.task }))
   })
-  return entries.map((e) => ({ ...toEntry(e), user: e.user, task: e.task }))
-})
 
 export const getActiveEntry = createServerFn().handler(async (): Promise<AppTimeEntry | null> => {
-  const user = await requireAuth()
+  const user = await requireUser()
   const entry = await prisma.timeEntry.findFirst({
     where: { userId: user.id, endTime: null },
     orderBy: { startTime: 'desc' },
   })
-  return entry ? toEntry(entry) : null
+  return entry ? toAppTimeEntry(entry) : null
 })
 
 export const clockIn = createServerFn({ method: 'POST' })
   .inputValidator(z.object({ taskId: z.string().optional(), taskName: z.string().min(1) }))
   .handler(async ({ data }): Promise<AppTimeEntry> => {
-    const user = await requireAuth()
+    const user = await requireUser()
     await prisma.timeEntry.updateMany({
       where: { userId: user.id, endTime: null },
       data: { endTime: new Date(), totalHours: 0 },
@@ -68,13 +61,13 @@ export const clockIn = createServerFn({ method: 'POST' })
     const entry = await prisma.timeEntry.create({
       data: { userId: user.id, taskId: data.taskId, taskName: data.taskName, startTime: new Date() },
     })
-    return toEntry(entry)
+    return toAppTimeEntry(entry)
   })
 
 export const clockOut = createServerFn({ method: 'POST' })
   .inputValidator(z.object({ entryId: z.string(), notes: z.string().optional() }))
   .handler(async ({ data }): Promise<AppTimeEntry> => {
-    const user = await requireAuth()
+    const user = await requireUser()
     const entry = await prisma.timeEntry.findFirst({ where: { id: data.entryId, userId: user.id } })
     if (!entry || entry.endTime) throw new Error('No active entry found')
     const endTime = new Date()
@@ -83,7 +76,7 @@ export const clockOut = createServerFn({ method: 'POST' })
       where: { id: data.entryId },
       data: { endTime, totalHours, notes: data.notes },
     })
-    return toEntry(updated)
+    return toAppTimeEntry(updated)
   })
 
 export const createTimeEntry = createServerFn({ method: 'POST' })
@@ -95,7 +88,7 @@ export const createTimeEntry = createServerFn({ method: 'POST' })
     notes: z.string().optional(),
   }))
   .handler(async ({ data }): Promise<AppTimeEntry> => {
-    const user = await requireAuth()
+    const user = await requireUser()
     const start = new Date(data.startTime)
     const end = new Date(data.endTime)
     if (end <= start) throw new Error('End time must be after start time')
@@ -111,7 +104,7 @@ export const createTimeEntry = createServerFn({ method: 'POST' })
         notes: data.notes,
       },
     })
-    return toEntry(entry)
+    return toAppTimeEntry(entry)
   })
 
 export const updateTimeEntry = createServerFn({ method: 'POST' })
@@ -124,7 +117,7 @@ export const updateTimeEntry = createServerFn({ method: 'POST' })
     notes: z.string().optional(),
   }))
   .handler(async ({ data }): Promise<AppTimeEntry> => {
-    const user = await requireAuth()
+    const user = await requireUser()
     const existing = await prisma.timeEntry.findFirst({ where: { id: data.id } })
     if (!existing) throw new Error('Entry not found')
     if (user.role !== 'ADMIN' && (existing.userId !== user.id || existing.approved)) {
@@ -144,13 +137,13 @@ export const updateTimeEntry = createServerFn({ method: 'POST' })
         notes: data.notes,
       },
     })
-    return toEntry(updated)
+    return toAppTimeEntry(updated)
   })
 
 export const deleteTimeEntry = createServerFn({ method: 'POST' })
   .inputValidator(z.object({ id: z.string() }))
   .handler(async ({ data }): Promise<{ success: boolean }> => {
-    const user = await requireAuth()
+    const user = await requireUser()
     const entry = await prisma.timeEntry.findFirst({ where: { id: data.id } })
     if (!entry) throw new Error('Entry not found')
     if (user.role !== 'ADMIN' && (entry.userId !== user.id || entry.approved)) {
@@ -165,7 +158,7 @@ export const approveTimeEntry = createServerFn({ method: 'POST' })
   .handler(async ({ data }): Promise<AppTimeEntry> => {
     await requireAdmin()
     const entry = await prisma.timeEntry.update({ where: { id: data.id }, data: { approved: data.approved } })
-    return toEntry(entry)
+    return toAppTimeEntry(entry)
   })
 
 export const flagTimeEntry = createServerFn({ method: 'POST' })
@@ -173,5 +166,5 @@ export const flagTimeEntry = createServerFn({ method: 'POST' })
   .handler(async ({ data }): Promise<AppTimeEntry> => {
     await requireAdmin()
     const entry = await prisma.timeEntry.update({ where: { id: data.id }, data: { flagged: data.flagged } })
-    return toEntry(entry)
+    return toAppTimeEntry(entry)
   })

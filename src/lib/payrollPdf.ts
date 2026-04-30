@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import { formatDate } from '#/lib/utils'
 import type { PayrollSummary } from '#/server/payroll'
 
 export function exportPayrollPdf(summary: PayrollSummary, poNumber?: string) {
@@ -16,12 +17,12 @@ export function exportPayrollPdf(summary: PayrollSummary, poNumber?: string) {
   doc.setFont('helvetica', 'normal')
   doc.setTextColor(100)
 
-  const start = formatDate(summary.periodStart)
-  const end = formatDate(summary.periodEnd)
+  const start = formatDate(summary.periodStart, { month: 'long' })
+  const end = formatDate(summary.periodEnd, { month: 'long' })
   doc.text(`Period: ${start} – ${end}`, margin, 30)
   if (poNumber) doc.text(`PO Number: ${poNumber}`, margin, 36)
   const genY = poNumber ? 42 : 36
-  doc.text(`Generated: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`, margin, genY)
+  doc.text(`Generated: ${formatDate(new Date(), { month: 'long' })}`, margin, genY)
 
   doc.setTextColor(0)
 
@@ -89,7 +90,6 @@ export function exportPayrollPdf(summary: PayrollSummary, poNumber?: string) {
 
   // — Signature section —
   const finalY = (doc as any).lastAutoTable.finalY as number
-  const sigY = Math.min(finalY + 20, doc.internal.pageSize.getHeight() - 50)
 
   // Add a new page if the table ran too close to the bottom
   if (finalY + 55 > doc.internal.pageSize.getHeight()) {
@@ -143,10 +143,4 @@ function formatCurrency(n: number) {
 
 function formatHours(n: number) {
   return `${n.toFixed(2)} hrs`
-}
-
-function formatDate(iso: string) {
-  return new Date(iso + 'T12:00:00').toLocaleDateString('en-US', {
-    year: 'numeric', month: 'long', day: 'numeric',
-  })
 }

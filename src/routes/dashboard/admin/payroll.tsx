@@ -1,9 +1,8 @@
-import { createFileRoute, redirect } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Download, FileText, Search } from 'lucide-react'
 import { getPayrollSummary } from '#/server/payroll'
-import { getMe } from '#/server/users'
 import { getAllTasks } from '#/server/tasks'
 import { PayrollTable } from '#/components/admin/PayrollTable'
 import { Button } from '#/components/ui/Button'
@@ -16,11 +15,6 @@ import type { PayrollSummary } from '#/server/payroll'
 import type { AppTask } from '#/lib/types'
 
 export const Route = createFileRoute('/dashboard/admin/payroll')({
-  beforeLoad: async () => {
-    const me = await getMe()
-    if (!me) throw redirect({ to: '/sign-in' })
-    if (me.role !== 'ADMIN') throw redirect({ to: '/dashboard/employee' })
-  },
   component: PayrollPage,
 })
 
@@ -78,9 +72,11 @@ function PayrollPage() {
   }
 
   function setPreset(months: number) {
-    const ref = months === 0 ? now : subMonths(now, months - 1)
-    setStartDate(format(startOfMonth(ref), 'yyyy-MM-dd'))
-    setEndDate(format(endOfMonth(months === 0 ? now : subMonths(now, 0)), 'yyyy-MM-dd'))
+    // months: 0 = This Month, 1 = Last Month, 2 = Last 3 Months
+    const start = months === 2 ? subMonths(now, 2) : subMonths(now, months)
+    const end = months === 1 ? subMonths(now, 1) : now
+    setStartDate(format(startOfMonth(start), 'yyyy-MM-dd'))
+    setEndDate(format(endOfMonth(end), 'yyyy-MM-dd'))
   }
 
   return (

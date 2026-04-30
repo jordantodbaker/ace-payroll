@@ -1,18 +1,13 @@
-import { createFileRoute, redirect } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { Users, Clock, DollarSign, AlertTriangle } from 'lucide-react'
-import { getAllUsers, getMe } from '#/server/users'
+import { getAllUsers } from '#/server/users'
 import { getAllTimeEntries } from '#/server/time-entries'
 import { TimeEntryList } from '#/components/time-tracking/TimeEntryList'
 import { formatHours } from '#/lib/utils'
 import type { AppUser, AppTimeEntryWithUser } from '#/lib/types'
 
 export const Route = createFileRoute('/dashboard/admin/')({
-  beforeLoad: async () => {
-    const me = await getMe()
-    if (!me) throw redirect({ to: '/sign-in' })
-    if (me.role !== 'ADMIN') throw redirect({ to: '/dashboard/employee' })
-  },
   component: AdminOverview,
 })
 
@@ -23,8 +18,8 @@ function AdminOverview() {
   })
 
   const { data: entries = [], isLoading } = useQuery<AppTimeEntryWithUser[]>({
-    queryKey: ['allTimeEntries'],
-    queryFn: () => getAllTimeEntries(),
+    queryKey: ['allTimeEntries', 'recent'],
+    queryFn: () => getAllTimeEntries({ data: { limit: 50 } }),
   })
 
   const pendingEntries = entries.filter((e) => !e.approved && !e.flagged && e.endTime)

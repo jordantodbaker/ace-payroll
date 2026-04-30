@@ -1,15 +1,8 @@
 import { createServerFn } from '@tanstack/react-start'
-import { auth } from '@clerk/tanstack-react-start/server'
 import { z } from 'zod'
 import { prisma } from '#/lib/prisma'
-
-async function requireAdmin() {
-  const { userId } = await auth()
-  if (!userId) throw new Error('Unauthorized')
-  const user = await prisma.user.findUnique({ where: { clerkId: userId } })
-  if (!user || user.role !== 'ADMIN') throw new Error('Forbidden: admin only')
-  return user
-}
+import { requireAdmin, requireUser } from '#/server/auth-helpers'
+import { timeEntryDateRangeWhere } from '#/server/date-range'
 
 const RangeSchema = z.object({ startDate: z.string(), endDate: z.string(), poNumber: z.string().optional() })
 
@@ -35,15 +28,10 @@ export const getPayrollSummary = createServerFn({ method: 'POST' })
   .inputValidator(RangeSchema)
   .handler(async ({ data }): Promise<PayrollSummary> => {
     await requireAdmin()
-    const start = new Date(data.startDate)
-    const end = new Date(data.endDate)
-    end.setHours(23, 59, 59, 999)
 
     const entries = await prisma.timeEntry.findMany({
       where: {
-        startTime: { gte: start },
-        endTime: { lte: end, not: null },
-        totalHours: { not: null },
+        ...timeEntryDateRangeWhere(data.startDate, data.endDate),
         ...(data.poNumber ? { task: { poNumber: data.poNumber } } : {}),
       },
       include: { user: true },
@@ -95,23 +83,14 @@ export const getPayrollSummary = createServerFn({ method: 'POST' })
   })
 
 export const getMyPaySummary = createServerFn({ method: 'POST' })
-  .inputValidator(RangeSchema)
+  .inputValidator(z.object({ startDate: z.string(), endDate: z.string() }))
   .handler(async ({ data }): Promise<{ totalHours: number; hourlyRate: number; estimatedPay: number }> => {
-    const { userId } = await auth()
-    if (!userId) throw new Error('Unauthorized')
-    const user = await prisma.user.findUnique({ where: { clerkId: userId } })
-    if (!user) throw new Error('User not found')
-
-    const start = new Date(data.startDate)
-    const end = new Date(data.endDate)
-    end.setHours(23, 59, 59, 999)
+    const user = await requireUser()
 
     const entries = await prisma.timeEntry.findMany({
       where: {
+        ...timeEntryDateRangeWhere(data.startDate, data.endDate),
         userId: user.id,
-        startTime: { gte: start },
-        endTime: { lte: end, not: null },
-        totalHours: { not: null },
       },
     })
 

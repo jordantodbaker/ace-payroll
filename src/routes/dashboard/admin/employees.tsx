@@ -1,27 +1,19 @@
-import { createFileRoute, redirect } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
-import { getAllUsers, getMe } from '#/server/users'
+import { getAllUsers } from '#/server/users'
 import { EmployeeTable } from '#/components/admin/EmployeeTable'
 import type { AppUser } from '#/lib/types'
 
 export const Route = createFileRoute('/dashboard/admin/employees')({
-  beforeLoad: async () => {
-    const me = await getMe()
-    if (!me) throw redirect({ to: '/sign-in' })
-    if (me.role !== 'ADMIN') throw redirect({ to: '/dashboard/employee' })
-  },
   component: EmployeesPage,
 })
 
 function EmployeesPage() {
+  const { user: me } = Route.useRouteContext() as { user: AppUser }
+
   const { data: users = [], isLoading } = useQuery<AppUser[]>({
     queryKey: ['allUsers'],
     queryFn: () => getAllUsers(),
-  })
-
-  const { data: me } = useQuery<AppUser | null>({
-    queryKey: ['me'],
-    queryFn: () => getMe(),
   })
 
   return (
@@ -37,7 +29,7 @@ function EmployeesPage() {
             {[1, 2, 3].map((i) => <div key={i} className="h-12 bg-gray-100 rounded" />)}
           </div>
         ) : (
-          <EmployeeTable employees={users} currentUserId={me?.id ?? ''} />
+          <EmployeeTable employees={users} currentUserId={me.id} />
         )}
       </div>
 

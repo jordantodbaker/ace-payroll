@@ -1,5 +1,5 @@
 import { ChevronDown, ChevronRight } from 'lucide-react'
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import { formatCurrency, formatHours } from '#/lib/utils'
 import type { PayrollSummary } from '#/server/payroll'
 
@@ -28,9 +28,8 @@ export function PayrollTable({ summary }: { summary: PayrollSummary }) {
         </thead>
         <tbody>
           {summary.employees.map((emp) => (
-            <>
+            <Fragment key={emp.id}>
               <tr
-                key={emp.id}
                 className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer"
                 onClick={() => toggle(emp.id)}
               >
@@ -69,7 +68,7 @@ export function PayrollTable({ summary }: { summary: PayrollSummary }) {
                   </td>
                 </tr>
               ))}
-            </>
+            </Fragment>
           ))}
         </tbody>
         <tfoot>

@@ -1,9 +1,8 @@
-import { createFileRoute, redirect } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Plus, Pencil, Trash2 } from 'lucide-react'
 import { getAllTasks, createTask, updateTask, deleteTask } from '#/server/tasks'
-import { getMe } from '#/server/users'
 import { Button } from '#/components/ui/Button'
 import { Input } from '#/components/ui/Input'
 import { Modal } from '#/components/ui/Modal'
@@ -12,11 +11,6 @@ import { formatDate } from '#/lib/utils'
 import type { AppTask } from '#/lib/types'
 
 export const Route = createFileRoute('/dashboard/admin/tasks')({
-  beforeLoad: async () => {
-    const me = await getMe()
-    if (!me) throw redirect({ to: '/sign-in' })
-    if (me.role !== 'ADMIN') throw redirect({ to: '/dashboard/employee' })
-  },
   component: TasksPage,
 })
 

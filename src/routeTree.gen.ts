@@ -14,6 +14,7 @@ import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
+import { Route as DashboardAdminRouteImport } from './routes/dashboard/admin'
 import { Route as DashboardEmployeeIndexRouteImport } from './routes/dashboard/employee/index'
 import { Route as DashboardAdminIndexRouteImport } from './routes/dashboard/admin/index'
 import { Route as DashboardEmployeeTimeLogRouteImport } from './routes/dashboard/employee/time-log'
@@ -46,15 +47,20 @@ const DashboardIndexRoute = DashboardIndexRouteImport.update({
   path: '/',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardAdminRoute = DashboardAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardEmployeeIndexRoute = DashboardEmployeeIndexRouteImport.update({
   id: '/employee/',
   path: '/employee/',
   getParentRoute: () => DashboardRoute,
 } as any)
 const DashboardAdminIndexRoute = DashboardAdminIndexRouteImport.update({
-  id: '/admin/',
-  path: '/admin/',
-  getParentRoute: () => DashboardRoute,
+  id: '/',
+  path: '/',
+  getParentRoute: () => DashboardAdminRoute,
 } as any)
 const DashboardEmployeeTimeLogRoute =
   DashboardEmployeeTimeLogRouteImport.update({
@@ -63,19 +69,19 @@ const DashboardEmployeeTimeLogRoute =
     getParentRoute: () => DashboardRoute,
   } as any)
 const DashboardAdminTasksRoute = DashboardAdminTasksRouteImport.update({
-  id: '/admin/tasks',
-  path: '/admin/tasks',
-  getParentRoute: () => DashboardRoute,
+  id: '/tasks',
+  path: '/tasks',
+  getParentRoute: () => DashboardAdminRoute,
 } as any)
 const DashboardAdminPayrollRoute = DashboardAdminPayrollRouteImport.update({
-  id: '/admin/payroll',
-  path: '/admin/payroll',
-  getParentRoute: () => DashboardRoute,
+  id: '/payroll',
+  path: '/payroll',
+  getParentRoute: () => DashboardAdminRoute,
 } as any)
 const DashboardAdminEmployeesRoute = DashboardAdminEmployeesRouteImport.update({
-  id: '/admin/employees',
-  path: '/admin/employees',
-  getParentRoute: () => DashboardRoute,
+  id: '/employees',
+  path: '/employees',
+  getParentRoute: () => DashboardAdminRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -83,6 +89,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRouteWithChildren
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
+  '/dashboard/admin': typeof DashboardAdminRouteWithChildren
   '/dashboard/': typeof DashboardIndexRoute
   '/dashboard/admin/employees': typeof DashboardAdminEmployeesRoute
   '/dashboard/admin/payroll': typeof DashboardAdminPayrollRoute
@@ -109,6 +116,7 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRouteWithChildren
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
+  '/dashboard/admin': typeof DashboardAdminRouteWithChildren
   '/dashboard/': typeof DashboardIndexRoute
   '/dashboard/admin/employees': typeof DashboardAdminEmployeesRoute
   '/dashboard/admin/payroll': typeof DashboardAdminPayrollRoute
@@ -124,6 +132,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/sign-in'
     | '/sign-up'
+    | '/dashboard/admin'
     | '/dashboard/'
     | '/dashboard/admin/employees'
     | '/dashboard/admin/payroll'
@@ -149,6 +158,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/sign-in'
     | '/sign-up'
+    | '/dashboard/admin'
     | '/dashboard/'
     | '/dashboard/admin/employees'
     | '/dashboard/admin/payroll'
@@ -202,6 +212,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardIndexRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard/admin': {
+      id: '/dashboard/admin'
+      path: '/admin'
+      fullPath: '/dashboard/admin'
+      preLoaderRoute: typeof DashboardAdminRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard/employee/': {
       id: '/dashboard/employee/'
       path: '/employee'
@@ -211,10 +228,10 @@ declare module '@tanstack/react-router' {
     }
     '/dashboard/admin/': {
       id: '/dashboard/admin/'
-      path: '/admin'
+      path: '/'
       fullPath: '/dashboard/admin/'
       preLoaderRoute: typeof DashboardAdminIndexRouteImport
-      parentRoute: typeof DashboardRoute
+      parentRoute: typeof DashboardAdminRoute
     }
     '/dashboard/employee/time-log': {
       id: '/dashboard/employee/time-log'
@@ -225,45 +242,57 @@ declare module '@tanstack/react-router' {
     }
     '/dashboard/admin/tasks': {
       id: '/dashboard/admin/tasks'
-      path: '/admin/tasks'
+      path: '/tasks'
       fullPath: '/dashboard/admin/tasks'
       preLoaderRoute: typeof DashboardAdminTasksRouteImport
-      parentRoute: typeof DashboardRoute
+      parentRoute: typeof DashboardAdminRoute
     }
     '/dashboard/admin/payroll': {
       id: '/dashboard/admin/payroll'
-      path: '/admin/payroll'
+      path: '/payroll'
       fullPath: '/dashboard/admin/payroll'
       preLoaderRoute: typeof DashboardAdminPayrollRouteImport
-      parentRoute: typeof DashboardRoute
+      parentRoute: typeof DashboardAdminRoute
     }
     '/dashboard/admin/employees': {
       id: '/dashboard/admin/employees'
-      path: '/admin/employees'
+      path: '/employees'
       fullPath: '/dashboard/admin/employees'
       preLoaderRoute: typeof DashboardAdminEmployeesRouteImport
-      parentRoute: typeof DashboardRoute
+      parentRoute: typeof DashboardAdminRoute
     }
   }
 }
 
-interface DashboardRouteChildren {
-  DashboardIndexRoute: typeof DashboardIndexRoute
+interface DashboardAdminRouteChildren {
   DashboardAdminEmployeesRoute: typeof DashboardAdminEmployeesRoute
   DashboardAdminPayrollRoute: typeof DashboardAdminPayrollRoute
   DashboardAdminTasksRoute: typeof DashboardAdminTasksRoute
-  DashboardEmployeeTimeLogRoute: typeof DashboardEmployeeTimeLogRoute
   DashboardAdminIndexRoute: typeof DashboardAdminIndexRoute
+}
+
+const DashboardAdminRouteChildren: DashboardAdminRouteChildren = {
+  DashboardAdminEmployeesRoute: DashboardAdminEmployeesRoute,
+  DashboardAdminPayrollRoute: DashboardAdminPayrollRoute,
+  DashboardAdminTasksRoute: DashboardAdminTasksRoute,
+  DashboardAdminIndexRoute: DashboardAdminIndexRoute,
+}
+
+const DashboardAdminRouteWithChildren = DashboardAdminRoute._addFileChildren(
+  DashboardAdminRouteChildren,
+)
+
+interface DashboardRouteChildren {
+  DashboardAdminRoute: typeof DashboardAdminRouteWithChildren
+  DashboardIndexRoute: typeof DashboardIndexRoute
+  DashboardEmployeeTimeLogRoute: typeof DashboardEmployeeTimeLogRoute
   DashboardEmployeeIndexRoute: typeof DashboardEmployeeIndexRoute
 }
 
 const DashboardRouteChildren: DashboardRouteChildren = {
+  DashboardAdminRoute: DashboardAdminRouteWithChildren,
   DashboardIndexRoute: DashboardIndexRoute,
-  DashboardAdminEmployeesRoute: DashboardAdminEmployeesRoute,
-  DashboardAdminPayrollRoute: DashboardAdminPayrollRoute,
-  DashboardAdminTasksRoute: DashboardAdminTasksRoute,
   DashboardEmployeeTimeLogRoute: DashboardEmployeeTimeLogRoute,
-  DashboardAdminIndexRoute: DashboardAdminIndexRoute,
   DashboardEmployeeIndexRoute: DashboardEmployeeIndexRoute,
 }
 

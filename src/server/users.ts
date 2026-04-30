@@ -1,28 +1,18 @@
 import { createServerFn } from '@tanstack/react-start'
-import { auth, clerkClient } from '@clerk/tanstack-react-start/server'
+import { clerkClient } from '@clerk/tanstack-react-start/server'
 import { z } from 'zod'
 import { prisma } from '#/lib/prisma'
+import { requireAdmin, requireClerkUserId, requireUser } from '#/server/auth-helpers'
+import { toAppUser } from '#/server/serialize'
 import type { AppUser } from '#/lib/types'
 
-function toAppUser(u: { id: string; clerkId: string; name: string; email: string; role: 'ADMIN' | 'EMPLOYEE'; hourlyRate: { toNumber(): number } | number; createdAt: Date }): AppUser {
-  return { ...u, hourlyRate: typeof u.hourlyRate === 'number' ? u.hourlyRate : u.hourlyRate.toNumber() }
-}
-
-async function requireAuth() {
-  const { userId } = await auth()
-  if (!userId) throw new Error('Unauthorized')
-  return userId
-}
-
-async function requireAdmin() {
-  const clerkId = await requireAuth()
-  const user = await prisma.user.findUnique({ where: { clerkId } })
-  if (!user || user.role !== 'ADMIN') throw new Error('Forbidden: admin only')
-  return user
+function getAdminEmails(): string[] {
+  const raw = process.env.ADMIN_EMAILS ?? ''
+  return raw.split(',').map((s) => s.trim().toLowerCase()).filter(Boolean)
 }
 
 export const syncUser = createServerFn({ method: 'POST' }).handler(async (): Promise<AppUser> => {
-  const clerkId = await requireAuth()
+  const clerkId = await requireClerkUserId()
   const clerk = clerkClient()
   const clerkUser = await clerk.users.getUser(clerkId)
   const email = clerkUser.emailAddresses[0]?.emailAddress ?? ''
@@ -30,22 +20,28 @@ export const syncUser = createServerFn({ method: 'POST' }).handler(async (): Pro
 
   const existing = await prisma.user.findUnique({ where: { clerkId } })
   if (existing) {
+    if (existing.name === name && existing.email === email) {
+      return toAppUser(existing)
+    }
     const updated = await prisma.user.update({ where: { clerkId }, data: { name, email } })
     return toAppUser(updated)
   }
 
-  const count = await prisma.user.count()
+  const adminEmails = getAdminEmails()
+  const role = adminEmails.includes(email.toLowerCase()) ? 'ADMIN' : 'EMPLOYEE'
   const created = await prisma.user.create({
-    data: { clerkId, name, email, role: count === 0 ? 'ADMIN' : 'EMPLOYEE' },
+    data: { clerkId, name, email, role },
   })
   return toAppUser(created)
 })
 
 export const getMe = createServerFn().handler(async (): Promise<AppUser | null> => {
-  const { userId } = await auth()
-  if (!userId) return null
-  const user = await prisma.user.findUnique({ where: { clerkId: userId } })
-  return user ? toAppUser(user) : null
+  try {
+    const user = await requireUser()
+    return toAppUser(user)
+  } catch {
+    return null
+  }
 })
 
 export const getAllUsers = createServerFn().handler(async (): Promise<AppUser[]> => {
@@ -69,6 +65,15 @@ export const updateUserRole = createServerFn({ method: 'POST' })
   .inputValidator(z.object({ userId: z.string(), role: z.enum(['ADMIN', 'EMPLOYEE']) }))
   .handler(async ({ data }): Promise<AppUser> => {
     await requireAdmin()
+
+    if (data.role === 'EMPLOYEE') {
+      const target = await prisma.user.findUnique({ where: { id: data.userId } })
+      if (target?.role === 'ADMIN') {
+        const adminCount = await prisma.user.count({ where: { role: 'ADMIN' } })
+        if (adminCount <= 1) throw new Error('Cannot demote the last remaining admin')
+      }
+    }
+
     const user = await prisma.user.update({ where: { id: data.userId }, data: { role: data.role } })
     return toAppUser(user)
   })
@@ -76,7 +81,15 @@ export const updateUserRole = createServerFn({ method: 'POST' })
 export const deleteUser = createServerFn({ method: 'POST' })
   .inputValidator(z.object({ userId: z.string() }))
   .handler(async ({ data }): Promise<{ success: boolean }> => {
-    await requireAdmin()
+    const me = await requireAdmin()
+    if (me.id === data.userId) throw new Error('You cannot delete your own account')
+
+    const target = await prisma.user.findUnique({ where: { id: data.userId } })
+    if (target?.role === 'ADMIN') {
+      const adminCount = await prisma.user.count({ where: { role: 'ADMIN' } })
+      if (adminCount <= 1) throw new Error('Cannot delete the last remaining admin')
+    }
+
     await prisma.user.delete({ where: { id: data.userId } })
     return { success: true }
   })

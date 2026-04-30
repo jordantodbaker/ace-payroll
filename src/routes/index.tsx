@@ -1,7 +1,6 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useAuth } from '@clerk/tanstack-react-start'
 import { useEffect } from 'react'
-import { useNavigate } from '@tanstack/react-router'
 import { Clock } from 'lucide-react'
 
 export const Route = createFileRoute('/')({ component: Landing })
@@ -29,18 +28,18 @@ function Landing() {
           Simple time tracking and payroll management for small teams.
         </p>
         <div className="flex gap-3 justify-center">
-          <a
-            href="/sign-in"
+          <Link
+            to="/sign-in"
             className="bg-indigo-600 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-indigo-700 transition-colors"
           >
             Sign In
-          </a>
-          <a
-            href="/sign-up"
+          </Link>
+          <Link
+            to="/sign-up"
             className="bg-white text-indigo-600 border border-indigo-200 px-6 py-2.5 rounded-lg font-medium hover:bg-indigo-50 transition-colors"
           >
             Sign Up
-          </a>
+          </Link>
         </div>
       </div>
     </div>
