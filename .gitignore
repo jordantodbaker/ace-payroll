@@ -13,3 +13,6 @@ dist-ssr
 .vercel
 __unconfig*
 todos.json
+
+# clerk configuration (can include secrets)
+/.clerk/

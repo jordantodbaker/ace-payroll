@@ -41,7 +41,6 @@ export function TimeEntryForm({ entry, onSuccess, onCancel }: TimeEntryFormProps
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ['myTimeEntries'] })
-    qc.invalidateQueries({ queryKey: ['myPaySummary'] })
     qc.invalidateQueries({ queryKey: ['allTimeEntries'] })
   }
 

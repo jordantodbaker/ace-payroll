@@ -7,11 +7,6 @@ export function formatHours(hours: number | null | undefined): string {
   return `${hours.toFixed(2)}h`
 }
 
-export function formatCurrency(amount: number | null | undefined): string {
-  if (amount == null) return '—'
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount)
-}
-
 export function formatDate(date: Date | string, opts: { month?: 'short' | 'long' } = {}): string {
   // Date-only strings ('2026-04-01') would otherwise be parsed as UTC midnight,
   // which displays as the previous day in negative-UTC timezones. Anchor to noon

@@ -5,7 +5,6 @@ import {
   LayoutDashboard,
   Users,
   ListChecks,
-  DollarSign,
   ClipboardList,
   X,
 } from 'lucide-react'
@@ -28,7 +27,6 @@ const adminNav: NavItem[] = [
   { to: '/dashboard/admin', label: 'Overview', icon: <LayoutDashboard className="w-5 h-5" />, exact: true },
   { to: '/dashboard/admin/employees', label: 'Employees', icon: <Users className="w-5 h-5" /> },
   { to: '/dashboard/admin/tasks', label: 'Tasks', icon: <ListChecks className="w-5 h-5" /> },
-  { to: '/dashboard/admin/payroll', label: 'Payroll', icon: <DollarSign className="w-5 h-5" /> },
 ]
 
 const employeeNav: NavItem[] = [
@@ -63,7 +61,7 @@ export function Sidebar({ role, open, onClose }: SidebarProps) {
         <div className="flex items-center justify-between gap-2 px-6 py-5 border-b border-gray-700">
           <div className="flex items-center gap-2">
             <Clock className="w-6 h-6 text-indigo-400" />
-            <span className="text-lg font-bold">PayrollApp</span>
+            <span className="text-lg font-bold">ACE Time</span>
           </div>
           <button
             type="button"

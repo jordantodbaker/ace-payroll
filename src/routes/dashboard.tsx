@@ -45,7 +45,7 @@ function DashboardLayout() {
         </button>
         <div className="flex items-center gap-2">
           <Clock className="w-5 h-5 text-indigo-600" />
-          <span className="font-semibold text-gray-900">PayrollApp</span>
+          <span className="font-semibold text-gray-900">ACE Time</span>
         </div>
         <div className="w-9" aria-hidden="true" />
       </header>

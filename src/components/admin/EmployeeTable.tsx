@@ -2,12 +2,11 @@ import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Pencil, Trash2, ShieldCheck, User as UserIcon } from 'lucide-react'
 import { Button } from '#/components/ui/Button'
-import { Input } from '#/components/ui/Input'
 import { Select } from '#/components/ui/Select'
 import { Badge } from '#/components/ui/Badge'
 import { Modal } from '#/components/ui/Modal'
-import { updateHourlyRate, updateUserRole, deleteUser } from '#/server/users'
-import { formatCurrency, formatDate } from '#/lib/utils'
+import { updateUserRole, deleteUser } from '#/server/users'
+import { formatDate } from '#/lib/utils'
 import type { AppUser } from '#/lib/types'
 
 interface EmployeeTableProps {
@@ -18,20 +17,17 @@ interface EmployeeTableProps {
 export function EmployeeTable({ employees, currentUserId }: EmployeeTableProps) {
   const qc = useQueryClient()
   const [editing, setEditing] = useState<AppUser | null>(null)
-  const [newRate, setNewRate] = useState('')
   const [newRole, setNewRole] = useState<'ADMIN' | 'EMPLOYEE'>('EMPLOYEE')
   const [confirmDelete, setConfirmDelete] = useState<AppUser | null>(null)
 
   function openEdit(emp: AppUser) {
     setEditing(emp)
-    setNewRate(emp.hourlyRate.toString())
     setNewRole(emp.role)
   }
 
   const updateMutation = useMutation({
     mutationFn: async () => {
       if (!editing) return
-      await updateHourlyRate({ data: { userId: editing.id, hourlyRate: parseFloat(newRate) } })
       if (newRole !== editing.role) {
         await updateUserRole({ data: { userId: editing.id, role: newRole } })
       }
@@ -59,7 +55,6 @@ export function EmployeeTable({ employees, currentUserId }: EmployeeTableProps) 
               <th className="pb-3 pr-4">Name</th>
               <th className="pb-3 pr-4">Email</th>
               <th className="pb-3 pr-4">Role</th>
-              <th className="pb-3 pr-4">Hourly Rate</th>
               <th className="pb-3 pr-4">Since</th>
               <th className="pb-3">Actions</th>
             </tr>
@@ -83,9 +78,6 @@ export function EmployeeTable({ employees, currentUserId }: EmployeeTableProps) 
                   <Badge variant={emp.role === 'ADMIN' ? 'blue' : 'gray'}>
                     {emp.role === 'ADMIN' ? 'Admin' : 'Employee'}
                   </Badge>
-                </td>
-                <td className="py-3 pr-4 tabular-nums text-gray-900">
-                  {formatCurrency(emp.hourlyRate)}/hr
                 </td>
                 <td className="py-3 pr-4 text-gray-500">{formatDate(emp.createdAt)}</td>
                 <td className="py-3">
@@ -118,14 +110,6 @@ export function EmployeeTable({ employees, currentUserId }: EmployeeTableProps) 
             <p className="text-sm text-gray-500">Employee</p>
             <p className="font-medium">{editing?.name}</p>
           </div>
-          <Input
-            label="Hourly Rate ($)"
-            type="number"
-            min="0"
-            step="0.01"
-            value={newRate}
-            onChange={(e) => setNewRate(e.target.value)}
-          />
           <Select
             label="Role"
             value={newRole}

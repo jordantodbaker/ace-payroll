@@ -41,7 +41,6 @@ export function ClockInOut() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['activeEntry'] })
       qc.invalidateQueries({ queryKey: ['myTimeEntries'] })
-      qc.invalidateQueries({ queryKey: ['myPaySummary'] })
       setNotes('')
     },
   })

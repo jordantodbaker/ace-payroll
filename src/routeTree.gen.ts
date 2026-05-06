@@ -19,7 +19,6 @@ import { Route as DashboardEmployeeIndexRouteImport } from './routes/dashboard/e
 import { Route as DashboardAdminIndexRouteImport } from './routes/dashboard/admin/index'
 import { Route as DashboardEmployeeTimeLogRouteImport } from './routes/dashboard/employee/time-log'
 import { Route as DashboardAdminTasksRouteImport } from './routes/dashboard/admin/tasks'
-import { Route as DashboardAdminPayrollRouteImport } from './routes/dashboard/admin/payroll'
 import { Route as DashboardAdminEmployeesRouteImport } from './routes/dashboard/admin/employees'
 
 const SignUpRoute = SignUpRouteImport.update({
@@ -73,11 +72,6 @@ const DashboardAdminTasksRoute = DashboardAdminTasksRouteImport.update({
   path: '/tasks',
   getParentRoute: () => DashboardAdminRoute,
 } as any)
-const DashboardAdminPayrollRoute = DashboardAdminPayrollRouteImport.update({
-  id: '/payroll',
-  path: '/payroll',
-  getParentRoute: () => DashboardAdminRoute,
-} as any)
 const DashboardAdminEmployeesRoute = DashboardAdminEmployeesRouteImport.update({
   id: '/employees',
   path: '/employees',
@@ -92,7 +86,6 @@ export interface FileRoutesByFullPath {
   '/dashboard/admin': typeof DashboardAdminRouteWithChildren
   '/dashboard/': typeof DashboardIndexRoute
   '/dashboard/admin/employees': typeof DashboardAdminEmployeesRoute
-  '/dashboard/admin/payroll': typeof DashboardAdminPayrollRoute
   '/dashboard/admin/tasks': typeof DashboardAdminTasksRoute
   '/dashboard/employee/time-log': typeof DashboardEmployeeTimeLogRoute
   '/dashboard/admin/': typeof DashboardAdminIndexRoute
@@ -104,7 +97,6 @@ export interface FileRoutesByTo {
   '/sign-up': typeof SignUpRoute
   '/dashboard': typeof DashboardIndexRoute
   '/dashboard/admin/employees': typeof DashboardAdminEmployeesRoute
-  '/dashboard/admin/payroll': typeof DashboardAdminPayrollRoute
   '/dashboard/admin/tasks': typeof DashboardAdminTasksRoute
   '/dashboard/employee/time-log': typeof DashboardEmployeeTimeLogRoute
   '/dashboard/admin': typeof DashboardAdminIndexRoute
@@ -119,7 +111,6 @@ export interface FileRoutesById {
   '/dashboard/admin': typeof DashboardAdminRouteWithChildren
   '/dashboard/': typeof DashboardIndexRoute
   '/dashboard/admin/employees': typeof DashboardAdminEmployeesRoute
-  '/dashboard/admin/payroll': typeof DashboardAdminPayrollRoute
   '/dashboard/admin/tasks': typeof DashboardAdminTasksRoute
   '/dashboard/employee/time-log': typeof DashboardEmployeeTimeLogRoute
   '/dashboard/admin/': typeof DashboardAdminIndexRoute
@@ -135,7 +126,6 @@ export interface FileRouteTypes {
     | '/dashboard/admin'
     | '/dashboard/'
     | '/dashboard/admin/employees'
-    | '/dashboard/admin/payroll'
     | '/dashboard/admin/tasks'
     | '/dashboard/employee/time-log'
     | '/dashboard/admin/'
@@ -147,7 +137,6 @@ export interface FileRouteTypes {
     | '/sign-up'
     | '/dashboard'
     | '/dashboard/admin/employees'
-    | '/dashboard/admin/payroll'
     | '/dashboard/admin/tasks'
     | '/dashboard/employee/time-log'
     | '/dashboard/admin'
@@ -161,7 +150,6 @@ export interface FileRouteTypes {
     | '/dashboard/admin'
     | '/dashboard/'
     | '/dashboard/admin/employees'
-    | '/dashboard/admin/payroll'
     | '/dashboard/admin/tasks'
     | '/dashboard/employee/time-log'
     | '/dashboard/admin/'
@@ -247,13 +235,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardAdminTasksRouteImport
       parentRoute: typeof DashboardAdminRoute
     }
-    '/dashboard/admin/payroll': {
-      id: '/dashboard/admin/payroll'
-      path: '/payroll'
-      fullPath: '/dashboard/admin/payroll'
-      preLoaderRoute: typeof DashboardAdminPayrollRouteImport
-      parentRoute: typeof DashboardAdminRoute
-    }
     '/dashboard/admin/employees': {
       id: '/dashboard/admin/employees'
       path: '/employees'
@@ -266,14 +247,12 @@ declare module '@tanstack/react-router' {
 
 interface DashboardAdminRouteChildren {
   DashboardAdminEmployeesRoute: typeof DashboardAdminEmployeesRoute
-  DashboardAdminPayrollRoute: typeof DashboardAdminPayrollRoute
   DashboardAdminTasksRoute: typeof DashboardAdminTasksRoute
   DashboardAdminIndexRoute: typeof DashboardAdminIndexRoute
 }
 
 const DashboardAdminRouteChildren: DashboardAdminRouteChildren = {
   DashboardAdminEmployeesRoute: DashboardAdminEmployeesRoute,
-  DashboardAdminPayrollRoute: DashboardAdminPayrollRoute,
   DashboardAdminTasksRoute: DashboardAdminTasksRoute,
   DashboardAdminIndexRoute: DashboardAdminIndexRoute,
 }

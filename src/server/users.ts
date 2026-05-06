@@ -64,17 +64,6 @@ export const getAllUsers = createServerFn().handler(async (): Promise<AppUser[]>
   return users.map(toAppUser)
 })
 
-export const updateHourlyRate = createServerFn({ method: 'POST' })
-  .inputValidator(z.object({ userId: z.string(), hourlyRate: z.number().min(0) }))
-  .handler(async ({ data }): Promise<AppUser> => {
-    await requireAdmin()
-    const user = await prisma.user.update({
-      where: { id: data.userId },
-      data: { hourlyRate: data.hourlyRate },
-    })
-    return toAppUser(user)
-  })
-
 export const updateUserRole = createServerFn({ method: 'POST' })
   .inputValidator(z.object({ userId: z.string(), role: z.enum(['ADMIN', 'EMPLOYEE']) }))
   .handler(async ({ data }): Promise<AppUser> => {

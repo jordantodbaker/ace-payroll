@@ -19,7 +19,6 @@ model User {
   name        String
   email       String      @unique
   role        Role        @default(EMPLOYEE)
-  hourlyRate  Decimal     @default(0) @db.Decimal(10, 2)
   createdAt   DateTime    @default(now())
   timeEntries TimeEntry[]
 }

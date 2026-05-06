@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
-import { Users, Clock, DollarSign, AlertTriangle } from 'lucide-react'
+import { Users, Clock, CheckCircle, AlertTriangle } from 'lucide-react'
 import { getAllUsers } from '#/server/users'
 import { getAllTimeEntries } from '#/server/time-entries'
 import { TimeEntryList } from '#/components/time-tracking/TimeEntryList'
@@ -48,7 +48,7 @@ function AdminOverview() {
         <StatCard
           label="Pending Approval"
           value={String(pendingEntries.length)}
-          icon={<DollarSign className="w-5 h-5 text-yellow-600" />}
+          icon={<CheckCircle className="w-5 h-5 text-yellow-600" />}
           highlight={pendingEntries.length > 0}
         />
         <StatCard

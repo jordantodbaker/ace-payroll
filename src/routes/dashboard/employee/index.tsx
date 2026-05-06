@@ -1,15 +1,14 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
-import { Plus, TrendingUp } from 'lucide-react'
+import { Plus, TrendingUp, Clock } from 'lucide-react'
 import { ClockInOut } from '#/components/time-tracking/ClockInOut'
 import { TimeEntryList } from '#/components/time-tracking/TimeEntryList'
 import { TimeEntryForm } from '#/components/time-tracking/TimeEntryForm'
 import { Modal } from '#/components/ui/Modal'
 import { Button } from '#/components/ui/Button'
 import { getMyTimeEntries } from '#/server/time-entries'
-import { getMyPaySummary } from '#/server/payroll'
-import { formatCurrency, formatHours } from '#/lib/utils'
+import { formatHours } from '#/lib/utils'
 import type { AppTimeEntryWithTask } from '#/lib/types'
 import { format, startOfMonth, endOfMonth } from 'date-fns'
 
@@ -18,27 +17,27 @@ export const Route = createFileRoute('/dashboard/employee/')({ component: Employ
 function EmployeeDashboard() {
   const [showAddEntry, setShowAddEntry] = useState(false)
   const now = new Date()
-  const periodStart = format(startOfMonth(now), 'yyyy-MM-dd')
-  const periodEnd = format(endOfMonth(now), 'yyyy-MM-dd')
+  const monthStart = startOfMonth(now)
+  const monthEnd = endOfMonth(now)
 
   const { data: entries = [], isLoading } = useQuery<AppTimeEntryWithTask[]>({
     queryKey: ['myTimeEntries'],
     queryFn: () => getMyTimeEntries(),
   })
 
-  const { data: paySummary } = useQuery({
-    queryKey: ['myPaySummary', periodStart, periodEnd],
-    queryFn: () => getMyPaySummary({ data: { startDate: periodStart, endDate: periodEnd } }),
-  })
-
   const completedEntries = entries.filter((e) => e.endTime)
+  const monthEntries = completedEntries.filter((e) => {
+    const start = new Date(e.startTime)
+    return start >= monthStart && start <= monthEnd
+  })
+  const monthHours = monthEntries.reduce((s, e) => s + (e.totalHours ?? 0), 0)
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-5xl">
       <div className="flex items-center justify-between gap-3 mb-6 lg:mb-8">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">My Dashboard</h1>
-          <p className="text-sm text-gray-500 mt-1">{format(now, 'MMMM yyyy')} pay period</p>
+          <p className="text-sm text-gray-500 mt-1">{format(now, 'MMMM yyyy')}</p>
         </div>
         <Button onClick={() => setShowAddEntry(true)}>
           <Plus className="w-4 h-4" />
@@ -47,20 +46,16 @@ function EmployeeDashboard() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6 lg:mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6 lg:mb-8">
         <StatCard
           label="Hours This Month"
-          value={formatHours(paySummary?.totalHours ?? 0)}
+          value={formatHours(monthHours)}
           icon={<TrendingUp className="w-5 h-5 text-indigo-600" />}
         />
         <StatCard
-          label="Estimated Pay"
-          value={formatCurrency(paySummary?.estimatedPay ?? 0)}
-          sub={`at ${formatCurrency(paySummary?.hourlyRate ?? 0)}/hr`}
-        />
-        <StatCard
           label="Entries This Month"
-          value={String(completedEntries.length)}
+          value={String(monthEntries.length)}
+          icon={<Clock className="w-5 h-5 text-indigo-600" />}
           sub="completed"
         />
       </div>

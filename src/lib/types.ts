@@ -8,7 +8,6 @@ export interface AppUser {
   name: string
   email: string
   role: UserRole
-  hourlyRate: number
   createdAt: Date
 }
 

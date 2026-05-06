@@ -22,10 +22,10 @@ function Landing() {
           <div className="bg-indigo-600 p-3 rounded-2xl">
             <Clock className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900">PayrollApp</h1>
+          <h1 className="text-3xl font-bold text-gray-900">ACE Time</h1>
         </div>
         <p className="text-lg text-gray-600 mb-8">
-          Simple time tracking and payroll management for small teams.
+          Simple time tracking for small teams.
         </p>
         <div className="flex gap-3 justify-center">
           <Link

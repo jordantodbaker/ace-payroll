@@ -37,7 +37,7 @@ function EmployeesPage() {
         <p className="text-sm text-blue-800">
           <strong>Adding employees:</strong> Team members sign up via{' '}
           <code className="bg-blue-100 px-1 rounded">/sign-up</code> and are automatically created as
-          employees on first dashboard access. Set their hourly rate and role here.
+          employees on first dashboard access. Set their role here.
         </p>
       </div>
     </div>

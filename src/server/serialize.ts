@@ -8,7 +8,7 @@ export function decimalToNumber(d: Prisma.Decimal | null): number | null {
 }
 
 export function toAppUser(u: User): AppUser {
-  return { ...u, hourlyRate: decimalToNumber(u.hourlyRate) }
+  return u
 }
 
 export function toAppTimeEntry(e: TimeEntry): AppTimeEntry {
