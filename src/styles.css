@@ -13,8 +13,3 @@ body,
 body {
   margin: 0;
 }
-
-/* Clerk component overrides */
-.cl-rootBox {
-  width: 100%;
-}
