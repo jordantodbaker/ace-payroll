@@ -14,19 +14,25 @@ export const getAllTasks = createServerFn().handler(async (): Promise<AppTask[]>
   return prisma.task.findMany({ orderBy: { name: 'asc' } })
 })
 
+const TaskFieldsSchema = z.object({
+  clientJobNum: z.string().optional(),
+  description: z.string().optional(),
+  poNumber: z.string().optional(),
+  client: z.string().optional(),
+  approver: z.string().optional(),
+})
+
 export const createTask = createServerFn({ method: 'POST' })
-  .inputValidator(z.object({ name: z.string().min(1), description: z.string().optional(), poNumber: z.string().optional() }))
+  .inputValidator(TaskFieldsSchema.extend({ name: z.string().min(1) }))
   .handler(async ({ data }): Promise<AppTask> => {
     await requireAdmin()
-    return prisma.task.create({ data: { name: data.name, description: data.description, poNumber: data.poNumber } })
+    return prisma.task.create({ data })
   })
 
 export const updateTask = createServerFn({ method: 'POST' })
-  .inputValidator(z.object({
+  .inputValidator(TaskFieldsSchema.extend({
     id: z.string(),
     name: z.string().min(1).optional(),
-    description: z.string().optional(),
-    poNumber: z.string().optional(),
     active: z.boolean().optional(),
   }))
   .handler(async ({ data }): Promise<AppTask> => {

@@ -22,9 +22,9 @@ function AdminOverview() {
     queryFn: () => getAllTimeEntries({ data: { limit: 50 } }),
   })
 
-  const pendingEntries = entries.filter((e) => !e.approved && !e.flagged && e.endTime)
+  const pendingEntries = entries.filter((e) => !e.approved && !e.flagged)
   const flaggedEntries = entries.filter((e) => e.flagged)
-  const totalHours = entries.reduce((s, e) => s + (e.totalHours ?? 0), 0)
+  const totalHours = entries.reduce((s, e) => s + e.totalHours, 0)
   const userMap = Object.fromEntries(users.map((u) => [u.id, u.name]))
 
   return (

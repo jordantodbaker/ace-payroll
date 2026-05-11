@@ -2,7 +2,6 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Plus, TrendingUp, Clock } from 'lucide-react'
-import { ClockInOut } from '#/components/time-tracking/ClockInOut'
 import { TimeEntryList } from '#/components/time-tracking/TimeEntryList'
 import { TimeEntryForm } from '#/components/time-tracking/TimeEntryForm'
 import { Modal } from '#/components/ui/Modal'
@@ -25,12 +24,20 @@ function EmployeeDashboard() {
     queryFn: () => getMyTimeEntries(),
   })
 
-  const completedEntries = entries.filter((e) => e.endTime)
-  const monthEntries = completedEntries.filter((e) => {
-    const start = new Date(e.startTime)
-    return start >= monthStart && start <= monthEnd
+  // Use workDate when present (the date the work actually happened) so seeded
+  // entries land in the right month. Fall back to createdAt for entries logged
+  // through the UI that don't yet carry an explicit workDate.
+  const monthEntries = entries.filter((e) => {
+    const ref = e.workDate ?? e.createdAt
+    const date = new Date(ref)
+    return date >= monthStart && date <= monthEnd
   })
-  const monthHours = monthEntries.reduce((s, e) => s + (e.totalHours ?? 0), 0)
+  const sortedMonthEntries = [...monthEntries].sort((a, b) => {
+    const aDate = new Date(a.workDate ?? a.createdAt).getTime()
+    const bDate = new Date(b.workDate ?? b.createdAt).getTime()
+    return bDate - aDate
+  })
+  const monthHours = monthEntries.reduce((s, e) => s + e.totalHours, 0)
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-5xl">
@@ -56,24 +63,18 @@ function EmployeeDashboard() {
           label="Entries This Month"
           value={String(monthEntries.length)}
           icon={<Clock className="w-5 h-5 text-indigo-600" />}
-          sub="completed"
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 lg:mb-8">
-        <div className="lg:col-span-1">
-          <ClockInOut />
-        </div>
-        <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
-          <h2 className="font-semibold text-gray-900 mb-4">Recent Time Entries</h2>
-          {isLoading ? (
-            <div className="animate-pulse space-y-3">
-              {[1, 2, 3].map((i) => <div key={i} className="h-10 bg-gray-100 rounded" />)}
-            </div>
-          ) : (
-            <TimeEntryList entries={entries.slice(0, 5)} />
-          )}
-        </div>
+      <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 mb-6 lg:mb-8">
+        <h2 className="font-semibold text-gray-900 mb-4">This Month's Time Entries</h2>
+        {isLoading ? (
+          <div className="animate-pulse space-y-3">
+            {[1, 2, 3].map((i) => <div key={i} className="h-10 bg-gray-100 rounded" />)}
+          </div>
+        ) : (
+          <TimeEntryList entries={sortedMonthEntries} />
+        )}
       </div>
 
       <Modal open={showAddEntry} onClose={() => setShowAddEntry(false)} title="Add Time Entry" size="md">
@@ -83,7 +84,7 @@ function EmployeeDashboard() {
   )
 }
 
-function StatCard({ label, value, sub, icon }: { label: string; value: string; sub?: string; icon?: React.ReactNode }) {
+function StatCard({ label, value, icon }: { label: string; value: string; icon?: React.ReactNode }) {
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-5">
       <div className="flex items-center justify-between mb-2">
@@ -91,7 +92,6 @@ function StatCard({ label, value, sub, icon }: { label: string; value: string; s
         {icon}
       </div>
       <p className="text-2xl font-bold text-gray-900">{value}</p>
-      {sub && <p className="text-xs text-gray-400 mt-1">{sub}</p>}
     </div>
   )
 }

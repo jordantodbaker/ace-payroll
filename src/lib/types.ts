@@ -13,9 +13,12 @@ export interface AppUser {
 
 export interface AppTask {
   id: string
+  clientJobNum: string | null
   name: string
   description: string | null
   poNumber: string | null
+  client: string | null
+  approver: string | null
   active: boolean
   createdAt: Date
 }
@@ -25,10 +28,10 @@ export interface AppTimeEntry {
   userId: string
   taskId: string | null
   taskName: string
-  startTime: Date
-  endTime: Date | null
-  totalHours: number | null
-  notes: string | null
+  weekEnding: Date | null
+  workDate: Date | null
+  totalHours: number
+  workDescription: string | null
   approved: boolean
   flagged: boolean
   createdAt: Date

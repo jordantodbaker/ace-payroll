@@ -42,6 +42,19 @@ export const syncUser = createServerFn({ method: 'POST' }).handler(async (): Pro
     return toAppUser(updated)
   }
 
+  // Email is unique in our schema, so if a row with this email already exists
+  // under a different clerkId (e.g. a stale Clerk session from earlier dev),
+  // reclaim it by updating its clerkId rather than failing the email constraint.
+  const byEmail = await prisma.user.findUnique({ where: { email } })
+  if (byEmail) {
+    const targetRole = isListedAdmin ? 'ADMIN' : byEmail.role
+    const updated = await prisma.user.update({
+      where: { id: byEmail.id },
+      data: { clerkId, name, role: targetRole },
+    })
+    return toAppUser(updated)
+  }
+
   const role = isListedAdmin ? 'ADMIN' : 'EMPLOYEE'
   const created = await prisma.user.create({
     data: { clerkId, name, email, role },

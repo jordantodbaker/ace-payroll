@@ -7,37 +7,37 @@ import { createTimeEntry, updateTimeEntry } from '#/server/time-entries'
 import { getTasks } from '#/server/tasks'
 import type { AppTask, AppTimeEntry } from '#/lib/types'
 
-function toLocalDatetimeString(date: Date): string {
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
-}
-
 interface TimeEntryFormProps {
   entry?: AppTimeEntry
   onSuccess: () => void
   onCancel: () => void
 }
 
+function toInputDate(d: Date | string): string {
+  const date = typeof d === 'string' ? new Date(d) : d
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
 export function TimeEntryForm({ entry, onSuccess, onCancel }: TimeEntryFormProps) {
   const qc = useQueryClient()
-  const now = new Date()
-  const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000)
 
   const [taskId, setTaskId] = useState(entry?.taskId ?? '')
   const [customTask, setCustomTask] = useState('')
-  const [startTime, setStartTime] = useState(
-    entry ? toLocalDatetimeString(new Date(entry.startTime)) : toLocalDatetimeString(oneHourAgo),
+  const [hours, setHours] = useState(entry ? String(entry.totalHours) : '')
+  const [workDate, setWorkDate] = useState(() =>
+    entry ? toInputDate(entry.workDate ?? entry.createdAt) : toInputDate(new Date()),
   )
-  const [endTime, setEndTime] = useState(
-    entry?.endTime ? toLocalDatetimeString(new Date(entry.endTime)) : toLocalDatetimeString(now),
-  )
-  const [notes, setNotes] = useState(entry?.notes ?? '')
+  const [workDescription, setWorkDescription] = useState(entry?.workDescription ?? '')
   const [error, setError] = useState('')
 
   const { data: tasks = [] } = useQuery<AppTask[]>({ queryKey: ['tasks'], queryFn: () => getTasks() })
 
   const selectedTask = tasks.find((t) => t.id === taskId)
   const taskName = taskId === '__custom' ? customTask : (entry?.taskName ?? selectedTask?.name ?? '')
+  const hoursNumber = parseFloat(hours)
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ['myTimeEntries'] })
@@ -50,9 +50,9 @@ export function TimeEntryForm({ entry, onSuccess, onCancel }: TimeEntryFormProps
         data: {
           taskId: taskId !== '__custom' ? taskId : undefined,
           taskName,
-          startTime,
-          endTime,
-          notes: notes || undefined,
+          hours: hoursNumber,
+          workDate,
+          workDescription: workDescription || undefined,
         },
       }),
     onSuccess: () => { invalidate(); onSuccess() },
@@ -66,9 +66,9 @@ export function TimeEntryForm({ entry, onSuccess, onCancel }: TimeEntryFormProps
           id: entry!.id,
           taskId: taskId !== '__custom' ? taskId : undefined,
           taskName,
-          startTime,
-          endTime,
-          notes: notes || undefined,
+          hours: hoursNumber,
+          workDate,
+          workDescription: workDescription || undefined,
         },
       }),
     onSuccess: () => { invalidate(); onSuccess() },
@@ -77,7 +77,7 @@ export function TimeEntryForm({ entry, onSuccess, onCancel }: TimeEntryFormProps
 
   const isEditing = !!entry
   const isPending = createMutation.isPending || updateMutation.isPending
-  const canSubmit = taskName.trim() && startTime && endTime
+  const canSubmit = taskName.trim() && Number.isFinite(hoursNumber) && hoursNumber > 0
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -108,24 +108,27 @@ export function TimeEntryForm({ entry, onSuccess, onCancel }: TimeEntryFormProps
         />
       )}
       <Input
-        label="Start time"
-        type="datetime-local"
-        value={startTime}
-        onChange={(e) => setStartTime(e.target.value)}
+        label="Date"
+        type="date"
+        value={workDate}
+        onChange={(e) => setWorkDate(e.target.value)}
         required
       />
       <Input
-        label="End time"
-        type="datetime-local"
-        value={endTime}
-        onChange={(e) => setEndTime(e.target.value)}
+        label="Hours"
+        type="number"
+        min="0"
+        step="0.25"
+        value={hours}
+        onChange={(e) => setHours(e.target.value)}
+        placeholder="e.g. 4.5"
         required
       />
       <Input
-        label="Notes (optional)"
-        value={notes}
-        onChange={(e) => setNotes(e.target.value)}
-        placeholder="Any additional notes..."
+        label="Work description (optional)"
+        value={workDescription}
+        onChange={(e) => setWorkDescription(e.target.value)}
+        placeholder="What did you work on?"
       />
       {error && <p className="text-sm text-red-600">{error}</p>}
       <div className="flex gap-2 justify-end">

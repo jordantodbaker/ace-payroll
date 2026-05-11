@@ -6,7 +6,7 @@ import { Badge } from '#/components/ui/Badge'
 import { Modal } from '#/components/ui/Modal'
 import { TimeEntryForm } from '#/components/time-tracking/TimeEntryForm'
 import { deleteTimeEntry, approveTimeEntry, flagTimeEntry } from '#/server/time-entries'
-import { formatDateTime, formatHours } from '#/lib/utils'
+import { formatDate, formatHours } from '#/lib/utils'
 import type { AppTimeEntry } from '#/lib/types'
 
 interface TimeEntryListProps {
@@ -54,8 +54,7 @@ export function TimeEntryList({ entries, isAdmin = false, showUser = false, user
             <tr className="border-b border-gray-200 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
               {showUser && <th className="pb-3 pr-4">Employee</th>}
               <th className="pb-3 pr-4">Task</th>
-              <th className="pb-3 pr-4">Start</th>
-              <th className="pb-3 pr-4">End</th>
+              <th className="pb-3 pr-4">Date</th>
               <th className="pb-3 pr-4">Hours</th>
               <th className="pb-3 pr-4">Status</th>
               <th className="pb-3">Actions</th>
@@ -70,14 +69,9 @@ export function TimeEntryList({ entries, isAdmin = false, showUser = false, user
                   </td>
                 )}
                 <td className="py-3 pr-4 text-gray-900">{entry.taskName}</td>
-                <td className="py-3 pr-4 text-gray-600">{formatDateTime(entry.startTime)}</td>
-                <td className="py-3 pr-4 text-gray-600">
-                  {entry.endTime ? formatDateTime(entry.endTime) : (
-                    <Badge variant="green">Active</Badge>
-                  )}
-                </td>
+                <td className="py-3 pr-4 text-gray-600">{formatDate(entry.workDate ?? entry.createdAt)}</td>
                 <td className="py-3 pr-4 tabular-nums text-gray-900">
-                  {entry.endTime ? formatHours(entry.totalHours) : '—'}
+                  {formatHours(entry.totalHours)}
                 </td>
                 <td className="py-3 pr-4">
                   <div className="flex gap-1 flex-wrap">
@@ -88,7 +82,7 @@ export function TimeEntryList({ entries, isAdmin = false, showUser = false, user
                 </td>
                 <td className="py-3">
                   <div className="flex items-center gap-1">
-                    {entry.endTime && (!entry.approved || isAdmin) && (
+                    {(!entry.approved || isAdmin) && (
                       <button
                         onClick={() => setEditing(entry)}
                         className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-700"

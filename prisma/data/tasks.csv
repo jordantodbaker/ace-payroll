@@ -1,0 +1,21 @@
+﻿clientJobNum,name,description,poNum,client,approver,active
+14800117,Sila 1904 PH,,19914,Haskell Corp.,TJ Butenschoen,TRUE
+4513164387,HFS FGRU Artesia,,4513164387,HF Sinclair,Antonio Aguilar,TRUE
+4900732819,MPC Planning,,4900732819,Marathon ,Tom Perry,TRUE
+19693,Haskell OH PC Improvements,,19693,Haskell Corp.,Bob Delgatto,TRUE
+19693-003,HASK: Controls Management,,,,,TRUE
+19693-004,HASK: CBS,,,,,TRUE
+19693-005,HASK: Schedule Portfolio,,,,,TRUE
+19693-006,HASK: Estimate Web App,,,,,TRUE
+19693-007,HASK: Change Log Web App,,,,,TRUE
+19693-008,HASK: Procedures,,,,,TRUE
+19693-009,HASK: Incentives,,,,,TRUE
+0208,Chuckanut,,2026,,,TRUE
+tbd,Grand Sierra,,,,,TRUE
+ACE_OH,ACE_OH Training,,1030,,1030,TRUE
+ACE_OH,ACE_OH IT - Software,,1020,,1020,TRUE
+ACE_OH,ACE_Administration,,1000,,1000,TRUE
+ACE_OH,ACE_Marketing / Sales,,1010,,1010,TRUE
+ACE_OH,ACE_PTO,,1900,,1900,TRUE
+ACE_OH,ACE_PA Other,,,,,TRUE
+ACE_UP,ACE_Unpaid Time Away,,,,,TRUE

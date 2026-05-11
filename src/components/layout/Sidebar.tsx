@@ -6,6 +6,8 @@ import {
   Users,
   ListChecks,
   ClipboardList,
+  History,
+  ShieldCheck,
   X,
 } from 'lucide-react'
 import { cn } from '#/lib/utils'
@@ -17,16 +19,34 @@ interface NavItem {
   exact?: boolean
 }
 
+interface NavSection {
+  label?: string
+  items: NavItem[]
+}
+
 interface SidebarProps {
   role: 'ADMIN' | 'EMPLOYEE'
   open: boolean
   onClose: () => void
 }
 
-const adminNav: NavItem[] = [
-  { to: '/dashboard/admin', label: 'Overview', icon: <LayoutDashboard className="w-5 h-5" />, exact: true },
-  { to: '/dashboard/admin/employees', label: 'Employees', icon: <Users className="w-5 h-5" /> },
-  { to: '/dashboard/admin/tasks', label: 'Tasks', icon: <ListChecks className="w-5 h-5" /> },
+const adminSections: NavSection[] = [
+  {
+    label: 'Admin',
+    items: [
+      { to: '/dashboard/admin', label: 'Overview', icon: <LayoutDashboard className="w-5 h-5" />, exact: true },
+      { to: '/dashboard/admin/employees', label: 'Employees', icon: <Users className="w-5 h-5" /> },
+      { to: '/dashboard/admin/tasks', label: 'Tasks', icon: <ListChecks className="w-5 h-5" /> },
+      { to: '/dashboard/admin/time-entries', label: 'Time Entries', icon: <History className="w-5 h-5" /> },
+    ],
+  },
+  {
+    label: 'Personal',
+    items: [
+      { to: '/dashboard/employee', label: 'My Dashboard', icon: <Clock className="w-5 h-5" />, exact: true },
+      { to: '/dashboard/employee/time-log', label: 'My Time Log', icon: <ClipboardList className="w-5 h-5" /> },
+    ],
+  },
 ]
 
 const employeeNav: NavItem[] = [
@@ -36,7 +56,6 @@ const employeeNav: NavItem[] = [
 
 export function Sidebar({ role, open, onClose }: SidebarProps) {
   const { user } = useUser()
-  const nav = role === 'ADMIN' ? adminNav : employeeNav
 
   return (
     <>
@@ -73,33 +92,73 @@ export function Sidebar({ role, open, onClose }: SidebarProps) {
           </button>
         </div>
 
-        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-          {nav.map((item) => (
-            <Link
-              key={item.to}
-              to={item.to}
-              onClick={onClose}
-              activeOptions={item.exact ? { exact: true } : undefined}
-              className={cn(
-                'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-                'text-gray-300 hover:bg-gray-800 hover:text-white',
-                '[&.active]:bg-indigo-600 [&.active]:text-white',
-              )}
-            >
-              {item.icon}
-              {item.label}
-            </Link>
-          ))}
+        <nav className="flex-1 px-3 py-4 overflow-y-auto" aria-label="Primary">
+          {role === 'ADMIN' ? (
+            adminSections.map((section, i) => (
+              <NavSectionView
+                key={section.label ?? i}
+                section={section}
+                onClose={onClose}
+                topMargin={i > 0}
+              />
+            ))
+          ) : (
+            <NavSectionView section={{ items: employeeNav }} onClose={onClose} />
+          )}
         </nav>
 
         <div className="px-4 py-4 border-t border-gray-700 flex items-center gap-3">
           <UserButton />
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="text-sm font-medium text-white truncate">{user?.fullName}</p>
-            <p className="text-xs text-gray-400 truncate">{role === 'ADMIN' ? 'Admin' : 'Employee'}</p>
+            <div className="flex items-center gap-1">
+              {role === 'ADMIN' && <ShieldCheck className="w-3 h-3 text-indigo-400" />}
+              <p className={cn('text-xs truncate', role === 'ADMIN' ? 'text-indigo-300' : 'text-gray-400')}>
+                {role === 'ADMIN' ? 'Admin' : 'Employee'}
+              </p>
+            </div>
           </div>
         </div>
       </aside>
     </>
+  )
+}
+
+interface NavSectionViewProps {
+  section: NavSection
+  onClose: () => void
+  topMargin?: boolean
+}
+
+function NavSectionView({ section, onClose, topMargin }: NavSectionViewProps) {
+  return (
+    <div className={cn(topMargin && 'mt-6')}>
+      {section.label && (
+        <div className="flex items-center gap-2 px-3 mb-2">
+          <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+            {section.label}
+          </span>
+          <div className="flex-1 h-px bg-gray-700" />
+        </div>
+      )}
+      <div className="space-y-1">
+        {section.items.map((item) => (
+          <Link
+            key={item.to}
+            to={item.to}
+            onClick={onClose}
+            activeOptions={item.exact ? { exact: true } : undefined}
+            className={cn(
+              'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+              'text-gray-300 hover:bg-gray-800 hover:text-white',
+              '[&.active]:bg-indigo-600 [&.active]:text-white',
+            )}
+          >
+            {item.icon}
+            {item.label}
+          </Link>
+        ))}
+      </div>
+    </div>
   )
 }

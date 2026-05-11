@@ -24,27 +24,30 @@ model User {
 }
 
 model Task {
-  id          String      @id @default(cuid())
-  name        String      @unique
-  description String?
-  poNumber    String?
-  active      Boolean     @default(true)
-  createdAt   DateTime    @default(now())
-  timeEntries TimeEntry[]
+  id           String      @id @default(cuid())
+  clientJobNum String?
+  name         String      @unique
+  description  String?
+  poNumber     String?
+  client       String?
+  approver     String?
+  active       Boolean     @default(true)
+  createdAt    DateTime    @default(now())
+  timeEntries  TimeEntry[]
 }
 
 model TimeEntry {
-  id         String    @id @default(cuid())
-  userId     String
-  taskId     String?
-  taskName   String
-  startTime  DateTime
-  endTime    DateTime?
-  totalHours Decimal?  @db.Decimal(10, 4)
-  notes      String?
-  approved   Boolean   @default(false)
-  flagged    Boolean   @default(false)
-  createdAt  DateTime  @default(now())
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  task       Task?     @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  id              String    @id @default(cuid())
+  userId          String
+  taskId          String?
+  taskName        String
+  weekEnding      DateTime?
+  workDate        DateTime?
+  totalHours      Decimal   @db.Decimal(10, 4)
+  workDescription String?
+  approved        Boolean   @default(false)
+  flagged         Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task            Task?     @relation(fields: [taskId], references: [id], onDelete: SetNull)
 }
