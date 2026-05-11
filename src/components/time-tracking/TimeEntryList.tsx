@@ -6,7 +6,7 @@ import { Badge } from '#/components/ui/Badge'
 import { Modal } from '#/components/ui/Modal'
 import { TimeEntryForm } from '#/components/time-tracking/TimeEntryForm'
 import { deleteTimeEntry, approveTimeEntry, flagTimeEntry } from '#/server/time-entries'
-import { formatDate, formatHours } from '#/lib/utils'
+import { entryDate, formatDate, formatHours } from '#/lib/utils'
 import type { AppTimeEntry } from '#/lib/types'
 
 interface TimeEntryListProps {
@@ -33,13 +33,19 @@ export function TimeEntryList({ entries, isAdmin = false, showUser = false, user
   const approveMutation = useMutation({
     mutationFn: ({ id, approved }: { id: string; approved: boolean }) =>
       approveTimeEntry({ data: { id, approved } }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['allTimeEntries'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['allTimeEntries'] })
+      qc.invalidateQueries({ queryKey: ['myTimeEntries'] })
+    },
   })
 
   const flagMutation = useMutation({
     mutationFn: ({ id, flagged }: { id: string; flagged: boolean }) =>
       flagTimeEntry({ data: { id, flagged } }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['allTimeEntries'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['allTimeEntries'] })
+      qc.invalidateQueries({ queryKey: ['myTimeEntries'] })
+    },
   })
 
   if (entries.length === 0) {
@@ -69,7 +75,7 @@ export function TimeEntryList({ entries, isAdmin = false, showUser = false, user
                   </td>
                 )}
                 <td className="py-3 pr-4 text-gray-900">{entry.taskName}</td>
-                <td className="py-3 pr-4 text-gray-600">{formatDate(entry.workDate ?? entry.createdAt)}</td>
+                <td className="py-3 pr-4 text-gray-600">{formatDate(entryDate(entry))}</td>
                 <td className="py-3 pr-4 tabular-nums text-gray-900">
                   {formatHours(entry.totalHours)}
                 </td>

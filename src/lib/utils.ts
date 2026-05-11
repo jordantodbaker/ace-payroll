@@ -7,6 +7,16 @@ export function formatHours(hours: number | null | undefined): string {
   return `${hours.toFixed(1)}h`
 }
 
+// Authoritative "when did this work happen" for a time entry. Prefer workDate
+// (the day work was performed); fall back to createdAt (when the entry was
+// logged) for legacy rows that pre-date the workDate field.
+export function entryDate(entry: {
+  workDate: Date | string | null
+  createdAt: Date | string
+}): Date {
+  return new Date(entry.workDate ?? entry.createdAt)
+}
+
 export function formatDate(date: Date | string, opts: { month?: 'short' | 'long' } = {}): string {
   // Date-only strings ('2026-04-01') would otherwise be parsed as UTC midnight,
   // which displays as the previous day in negative-UTC timezones. Anchor to noon

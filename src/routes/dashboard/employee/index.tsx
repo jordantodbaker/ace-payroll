@@ -7,7 +7,7 @@ import { TimeEntryForm } from '#/components/time-tracking/TimeEntryForm'
 import { Modal } from '#/components/ui/Modal'
 import { Button } from '#/components/ui/Button'
 import { getMyTimeEntries } from '#/server/time-entries'
-import { formatHours } from '#/lib/utils'
+import { entryDate, formatHours } from '#/lib/utils'
 import type { AppTimeEntryWithTask } from '#/lib/types'
 import { format, startOfMonth, endOfMonth } from 'date-fns'
 
@@ -24,19 +24,13 @@ function EmployeeDashboard() {
     queryFn: () => getMyTimeEntries(),
   })
 
-  // Use workDate when present (the date the work actually happened) so seeded
-  // entries land in the right month. Fall back to createdAt for entries logged
-  // through the UI that don't yet carry an explicit workDate.
   const monthEntries = entries.filter((e) => {
-    const ref = e.workDate ?? e.createdAt
-    const date = new Date(ref)
+    const date = entryDate(e)
     return date >= monthStart && date <= monthEnd
   })
-  const sortedMonthEntries = [...monthEntries].sort((a, b) => {
-    const aDate = new Date(a.workDate ?? a.createdAt).getTime()
-    const bDate = new Date(b.workDate ?? b.createdAt).getTime()
-    return bDate - aDate
-  })
+  const sortedMonthEntries = [...monthEntries].sort(
+    (a, b) => entryDate(b).getTime() - entryDate(a).getTime(),
+  )
   const monthHours = monthEntries.reduce((s, e) => s + e.totalHours, 0)
 
   return (

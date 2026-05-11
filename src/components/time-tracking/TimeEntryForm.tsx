@@ -5,6 +5,7 @@ import { Input } from '#/components/ui/Input'
 import { Select } from '#/components/ui/Select'
 import { createTimeEntry, updateTimeEntry } from '#/server/time-entries'
 import { getTasks } from '#/server/tasks'
+import { entryDate } from '#/lib/utils'
 import type { AppTask, AppTimeEntry } from '#/lib/types'
 
 interface TimeEntryFormProps {
@@ -13,11 +14,10 @@ interface TimeEntryFormProps {
   onCancel: () => void
 }
 
-function toInputDate(d: Date | string): string {
-  const date = typeof d === 'string' ? new Date(d) : d
-  const y = date.getFullYear()
-  const m = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
+function toInputDate(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
   return `${y}-${m}-${day}`
 }
 
@@ -28,7 +28,7 @@ export function TimeEntryForm({ entry, onSuccess, onCancel }: TimeEntryFormProps
   const [customTask, setCustomTask] = useState('')
   const [hours, setHours] = useState(entry ? String(entry.totalHours) : '')
   const [workDate, setWorkDate] = useState(() =>
-    entry ? toInputDate(entry.workDate ?? entry.createdAt) : toInputDate(new Date()),
+    toInputDate(entry ? entryDate(entry) : new Date()),
   )
   const [workDescription, setWorkDescription] = useState(entry?.workDescription ?? '')
   const [error, setError] = useState('')

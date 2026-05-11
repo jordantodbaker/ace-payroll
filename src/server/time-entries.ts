@@ -10,7 +10,9 @@ export const getMyTimeEntries = createServerFn().handler(async (): Promise<AppTi
   const user = await requireUser()
   const entries = await prisma.timeEntry.findMany({
     where: { userId: user.id },
-    orderBy: { createdAt: 'desc' },
+    // Sort by workDate (the work day) primarily; createdAt is the tiebreaker
+    // and the fallback for legacy rows that have no workDate.
+    orderBy: [{ workDate: 'desc' }, { createdAt: 'desc' }],
     include: { task: { select: { name: true } } },
   })
   return entries.map((e) => ({ ...toAppTimeEntry(e), task: e.task }))
@@ -31,7 +33,7 @@ export const getAllTimeEntries = createServerFn({ method: 'POST' })
       : {}
     const entries = await prisma.timeEntry.findMany({
       where,
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ workDate: 'desc' }, { createdAt: 'desc' }],
       take: data?.limit ?? 100,
       include: {
         user: { select: { name: true, email: true } },
@@ -49,6 +51,16 @@ function parseWorkDate(s: string): Date {
   return new Date(y, m - 1, d, 12)
 }
 
+// A "week" is Mon–Sun, so weekEnding is the Sunday on or after the workDate.
+// Sunday workDate maps to itself (it's already the last day of its week).
+function weekEndingFor(workDate: Date): Date {
+  const sunday = new Date(workDate)
+  const day = sunday.getDay() // 0 = Sun, 6 = Sat
+  const daysUntilSunday = day === 0 ? 0 : 7 - day
+  sunday.setDate(sunday.getDate() + daysUntilSunday)
+  return sunday
+}
+
 export const createTimeEntry = createServerFn({ method: 'POST' })
   .inputValidator(z.object({
     taskId: z.string().optional(),
@@ -59,13 +71,15 @@ export const createTimeEntry = createServerFn({ method: 'POST' })
   }))
   .handler(async ({ data }): Promise<AppTimeEntry> => {
     const user = await requireUser()
+    const workDate = parseWorkDate(data.workDate)
     const entry = await prisma.timeEntry.create({
       data: {
         userId: user.id,
         taskId: data.taskId,
         taskName: data.taskName,
         totalHours: data.hours,
-        workDate: parseWorkDate(data.workDate),
+        workDate,
+        weekEnding: weekEndingFor(workDate),
         workDescription: data.workDescription,
       },
     })
@@ -88,13 +102,17 @@ export const updateTimeEntry = createServerFn({ method: 'POST' })
     if (user.role !== 'ADMIN' && (existing.userId !== user.id || existing.approved)) {
       throw new Error('Cannot edit this entry')
     }
+    const newWorkDate = data.workDate ? parseWorkDate(data.workDate) : undefined
     const updated = await prisma.timeEntry.update({
       where: { id: data.id },
       data: {
         taskId: data.taskId,
         taskName: data.taskName,
         totalHours: data.hours,
-        workDate: data.workDate ? parseWorkDate(data.workDate) : undefined,
+        workDate: newWorkDate,
+        // Recompute weekEnding only when workDate actually changed, to avoid
+        // overwriting a manually-set weekEnding (e.g. seeded data).
+        weekEnding: newWorkDate ? weekEndingFor(newWorkDate) : undefined,
         workDescription: data.workDescription,
       },
     })
