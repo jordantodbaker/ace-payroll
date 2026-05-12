@@ -152,13 +152,13 @@ function AllTimeEntriesPage() {
   function handleExportCsv() {
     if (filtered.length === 0) return
     const rows: string[][] = [
-      ['Date', 'Employee Name', 'PO Line', 'Description', 'Total Hours'],
+      ['Date', 'EmployeeName', 'PO_Line', 'WorkDescription', 'Hours'],
       ...filtered.map((e) => [
         formatDate(entryDate(e)),
         userMap[e.userId] ?? e.user?.name ?? '',
         e.task?.poLine ?? '',
         e.workDescription ?? '',
-        formatHours(e.totalHours),
+        e.totalHours.toFixed(1),
       ]),
     ]
     const suffix = [
