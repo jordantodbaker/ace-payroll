@@ -207,10 +207,48 @@ async function seedTimeEntries() {
   console.log(`✔ time entries  inserted=${inserted}  updated=${updated}  skipped=${skipped}  unmappedTasks=${unmappedTasks}`)
 }
 
+// Re-link time entries whose taskId got nulled (e.g. by an `onDelete: SetNull`
+// cascade during a schema migration) back to a task when their taskName matches
+// exactly one task. Ambiguous taskNames (matching multiple tasks) are skipped
+// to avoid guessing.
+async function reconcileTimeEntryTasks() {
+  const tasks = await prisma.task.findMany({ select: { id: true, name: true } })
+  const countByName = new Map<string, number>()
+  const idByName = new Map<string, string>()
+  for (const t of tasks) {
+    countByName.set(t.name, (countByName.get(t.name) ?? 0) + 1)
+    idByName.set(t.name, t.id)
+  }
+
+  const orphans = await prisma.timeEntry.findMany({
+    where: { taskId: null },
+    select: { id: true, taskName: true },
+  })
+
+  let relinked = 0
+  let ambiguous = 0
+  let nomatch = 0
+
+  for (const e of orphans) {
+    const count = countByName.get(e.taskName) ?? 0
+    if (count === 1) {
+      const taskId = idByName.get(e.taskName)!
+      await prisma.timeEntry.update({ where: { id: e.id }, data: { taskId } })
+      relinked++
+    } else if (count > 1) {
+      ambiguous++
+    } else {
+      nomatch++
+    }
+  }
+  console.log(`✔ reconcile taskIds  relinked=${relinked}  ambiguous=${ambiguous}  no-match=${nomatch}`)
+}
+
 async function main() {
   await seedUsers()
   await seedTasks()
   await seedTimeEntries()
+  await reconcileTimeEntryTasks()
 }
 
 main()
