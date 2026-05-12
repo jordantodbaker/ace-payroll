@@ -1,13 +1,13 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { Plus, Pencil, Trash2 } from 'lucide-react'
+import { Plus, Pencil, Trash2, Download } from 'lucide-react'
 import { getAllTasks, createTask, updateTask, deleteTask } from '#/server/tasks'
 import { Button } from '#/components/ui/Button'
 import { Input } from '#/components/ui/Input'
 import { Modal } from '#/components/ui/Modal'
 import { Badge } from '#/components/ui/Badge'
-import { formatDate } from '#/lib/utils'
+import { downloadCsv, formatDate } from '#/lib/utils'
 import type { AppTask } from '#/lib/types'
 
 export const Route = createFileRoute('/dashboard/admin/tasks')({
@@ -113,6 +113,24 @@ function TasksPage() {
 
   const canSubmit = form.name.trim().length > 0
 
+  function handleExportCsv() {
+    if (tasks.length === 0) return
+    const rows: string[][] = [
+      ['Name', 'Client Job #', 'Description', 'PO Number', 'Client', 'Approver', 'Status', 'Created'],
+      ...tasks.map((t) => [
+        t.name,
+        t.clientJobNum ?? '',
+        t.description ?? '',
+        t.poNumber ?? '',
+        t.client ?? '',
+        t.approver ?? '',
+        t.active ? 'Active' : 'Inactive',
+        formatDate(t.createdAt),
+      ]),
+    ]
+    downloadCsv('tasks.csv', rows)
+  }
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl">
       <div className="flex items-center justify-between gap-3 mb-6 lg:mb-8">
@@ -120,11 +138,18 @@ function TasksPage() {
           <h1 className="text-2xl font-bold text-gray-900">Tasks</h1>
           <p className="text-sm text-gray-500 mt-1">Manage predefined task categories</p>
         </div>
-        <Button onClick={openAdd}>
-          <Plus className="w-4 h-4" />
-          <span className="hidden sm:inline">Add Task</span>
-          <span className="sm:hidden">Add</span>
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="secondary" onClick={handleExportCsv} disabled={tasks.length === 0}>
+            <Download className="w-4 h-4" />
+            <span className="hidden sm:inline">Export CSV</span>
+            <span className="sm:hidden">CSV</span>
+          </Button>
+          <Button onClick={openAdd}>
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">Add Task</span>
+            <span className="sm:hidden">Add</span>
+          </Button>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
