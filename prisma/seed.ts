@@ -208,40 +208,71 @@ async function seedTimeEntries() {
 }
 
 // Re-link time entries whose taskId got nulled (e.g. by an `onDelete: SetNull`
-// cascade during a schema migration) back to a task when their taskName matches
-// exactly one task. Ambiguous taskNames (matching multiple tasks) are skipped
-// to avoid guessing.
+// cascade during a schema migration). For each orphan:
+//   1. Sibling-dedup: if another non-orphan row has same userId/workDate/hours,
+//      this is a stale duplicate of a reconciled row — delete it.
+//   2. Try the explicit old→new mapping (handles renamed projects like
+//      "HASK: Schedule Portfolio" → poLine 19693_005).
+//   3. Fall back to exact taskName match, but only when unambiguous (one task).
 async function reconcileTimeEntryTasks() {
-  const tasks = await prisma.task.findMany({ select: { id: true, name: true } })
-  const countByName = new Map<string, number>()
-  const idByName = new Map<string, string>()
+  const tasks = await prisma.task.findMany({ select: { id: true, name: true, poLine: true } })
+  const taskByPoLine = new Map(tasks.map((t) => [t.poLine, t]))
+  const tasksByName = new Map<string, typeof tasks>()
   for (const t of tasks) {
-    countByName.set(t.name, (countByName.get(t.name) ?? 0) + 1)
-    idByName.set(t.name, t.id)
+    const list = tasksByName.get(t.name) ?? []
+    list.push(t)
+    tasksByName.set(t.name, list)
   }
 
   const orphans = await prisma.timeEntry.findMany({
     where: { taskId: null },
-    select: { id: true, taskName: true },
+    select: { id: true, userId: true, workDate: true, totalHours: true, taskName: true },
   })
 
+  let deleted = 0
   let relinked = 0
-  let ambiguous = 0
-  let nomatch = 0
+  let leftAlone = 0
 
-  for (const e of orphans) {
-    const count = countByName.get(e.taskName) ?? 0
-    if (count === 1) {
-      const taskId = idByName.get(e.taskName)!
-      await prisma.timeEntry.update({ where: { id: e.id }, data: { taskId } })
+  for (const o of orphans) {
+    // Step 1 — sibling dedup. Only count siblings that are themselves linked
+    // (taskId != null), so two orphans don't cannibalize each other.
+    const sibling = await prisma.timeEntry.findFirst({
+      where: {
+        userId: o.userId,
+        workDate: o.workDate,
+        totalHours: o.totalHours,
+        NOT: { id: o.id },
+        taskId: { not: null },
+      },
+      select: { id: true },
+    })
+    if (sibling) {
+      await prisma.timeEntry.delete({ where: { id: o.id } })
+      deleted++
+      continue
+    }
+
+    // Step 2 — explicit migration mapping.
+    const poLine = TIME_ENTRY_PROJECT_TO_PO_LINE[o.taskName]
+    let task = poLine ? taskByPoLine.get(poLine) : undefined
+
+    // Step 3 — exact-name fallback (unambiguous matches only).
+    if (!task) {
+      const candidates = tasksByName.get(o.taskName) ?? []
+      if (candidates.length === 1) task = candidates[0]
+    }
+
+    if (task) {
+      await prisma.timeEntry.update({
+        where: { id: o.id },
+        data: { taskId: task.id, taskName: task.name },
+      })
       relinked++
-    } else if (count > 1) {
-      ambiguous++
     } else {
-      nomatch++
+      leftAlone++
     }
   }
-  console.log(`✔ reconcile taskIds  relinked=${relinked}  ambiguous=${ambiguous}  no-match=${nomatch}`)
+  console.log(`✔ reconcile taskIds  deleted=${deleted}  relinked=${relinked}  leftAlone=${leftAlone}`)
 }
 
 async function main() {
