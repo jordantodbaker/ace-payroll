@@ -17,6 +17,19 @@ export function entryDate(entry: {
   return new Date(entry.workDate ?? entry.createdAt)
 }
 
+export function downloadCsv(filename: string, rows: string[][]): void {
+  const csv = rows
+    .map((r) => r.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+    .join('\n')
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 export function formatDate(date: Date | string, opts: { month?: 'short' | 'long' } = {}): string {
   // Date-only strings ('2026-04-01') would otherwise be parsed as UTC midnight,
   // which displays as the previous day in negative-UTC timezones. Anchor to noon

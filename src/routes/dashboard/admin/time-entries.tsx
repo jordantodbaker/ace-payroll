@@ -1,12 +1,14 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
+import { Download, FileText } from 'lucide-react'
 import { getAllTimeEntries } from '#/server/time-entries'
 import { getAllUsers } from '#/server/users'
 import { TimeEntryList } from '#/components/time-tracking/TimeEntryList'
 import { Select } from '#/components/ui/Select'
 import { Button } from '#/components/ui/Button'
-import { formatDate } from '#/lib/utils'
+import { downloadCsv, entryDate, formatDate, formatHours } from '#/lib/utils'
+import { exportTimeEntriesPdf } from '#/lib/timeEntriesPdf'
 import type { AppUser, AppTimeEntryWithUser } from '#/lib/types'
 
 export const Route = createFileRoute('/dashboard/admin/time-entries')({
@@ -86,15 +88,66 @@ function AllTimeEntriesPage() {
     setWeekEnding(''); setUserId(''); setTaskName(''); setStatus('all')
   }
 
+  // Filter snapshot used by both exports — keeps CSV/PDF/filename consistent.
+  const exportFilters = {
+    weekEnding: weekEnding && weekEnding !== NO_WEEK ? formatDate(weekEnding) : weekEnding === NO_WEEK ? '(no week ending)' : undefined,
+    employeeName: userId ? userMap[userId] : undefined,
+    taskName: taskName || undefined,
+    status: status !== 'all' ? status : undefined,
+  }
+
+  function handleExportCsv() {
+    if (filtered.length === 0) return
+    const rows: string[][] = [
+      ['Employee', 'Date', 'Week Ending', 'Task', 'Hours', 'Status', 'Description'],
+      ...filtered.map((e) => [
+        userMap[e.userId] ?? e.user?.name ?? '',
+        formatDate(entryDate(e)),
+        e.weekEnding ? formatDate(e.weekEnding) : '',
+        e.taskName,
+        formatHours(e.totalHours),
+        e.approved ? 'Approved' : e.flagged ? 'Flagged' : 'Pending',
+        e.workDescription ?? '',
+      ]),
+    ]
+    const suffix = [
+      exportFilters.weekEnding && `week-${weekEnding}`,
+      exportFilters.employeeName && exportFilters.employeeName.replace(/\s+/g, '-'),
+      exportFilters.status,
+    ].filter(Boolean).join('_')
+    downloadCsv(`time-entries${suffix ? `-${suffix}` : ''}.csv`, rows)
+  }
+
+  function handleExportPdf() {
+    if (filtered.length === 0) return
+    exportTimeEntriesPdf(filtered, userMap, exportFilters)
+  }
+
+  const canExport = !isLoading && filtered.length > 0
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl">
-      <div className="mb-6 lg:mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">All Time Entries</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          {isLoading
-            ? 'Loading…'
-            : `${filtered.length} of ${entries.length} entries`}
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6 lg:mb-8">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">All Time Entries</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            {isLoading
+              ? 'Loading…'
+              : `${filtered.length} of ${entries.length} entries`}
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="secondary" onClick={handleExportCsv} disabled={!canExport}>
+            <Download className="w-4 h-4" />
+            <span className="hidden sm:inline">Export CSV</span>
+            <span className="sm:hidden">CSV</span>
+          </Button>
+          <Button variant="secondary" onClick={handleExportPdf} disabled={!canExport}>
+            <FileText className="w-4 h-4" />
+            <span className="hidden sm:inline">Export PDF</span>
+            <span className="sm:hidden">PDF</span>
+          </Button>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 mb-6">
