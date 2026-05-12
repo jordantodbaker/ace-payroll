@@ -52,6 +52,7 @@ function AdminOverview() {
   const pendingEntries = filteredEntries.filter((e) => !e.approved && !e.flagged)
   const flaggedEntries = filteredEntries.filter((e) => e.flagged)
   const totalHours = filteredEntries.reduce((s, e) => s + e.totalHours, 0)
+  const activeEmployeeCount = new Set(filteredEntries.map((e) => e.userId)).size
   const userMap = Object.fromEntries(users.map((u) => [u.id, u.name]))
 
   return (
@@ -80,8 +81,8 @@ function AdminOverview() {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 lg:mb-8">
         <StatCard
-          label="Employees"
-          value={String(users.filter((u) => u.role === 'EMPLOYEE').length)}
+          label="Active Employees"
+          value={String(activeEmployeeCount)}
           icon={<Users className="w-5 h-5 text-indigo-600" />}
         />
         <StatCard
@@ -105,7 +106,7 @@ function AdminOverview() {
 
       <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
         <h2 className="font-semibold text-gray-900 mb-4">
-          {weekEnding ? "Week's Time Entries" : 'Recent Time Entries'}
+          {weekEnding ? "Week's Time Entries" : 'Time Entries'}
         </h2>
         {isLoading ? (
           <div className="animate-pulse space-y-3">
@@ -116,12 +117,7 @@ function AdminOverview() {
             No time entries{weekEnding ? ' for the selected week' : ''} yet.
           </p>
         ) : (
-          <TimeEntryList
-            entries={weekEnding ? filteredEntries : filteredEntries.slice(0, 10)}
-            isAdmin
-            showUser
-            userMap={userMap}
-          />
+          <TimeEntryList entries={filteredEntries} isAdmin showUser userMap={userMap} />
         )}
       </div>
     </div>

@@ -82,6 +82,11 @@ function AllTimeEntriesPage() {
     })
   }, [entries, userId, taskName, weekEnding, status])
 
+  const totalHours = useMemo(
+    () => filtered.reduce((s, e) => s + e.totalHours, 0),
+    [filtered],
+  )
+
   const activeFilters = !!(userId || taskName || weekEnding || status !== 'all')
 
   function clearFilters() {
@@ -131,9 +136,16 @@ function AllTimeEntriesPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">All Time Entries</h1>
           <p className="text-sm text-gray-500 mt-1">
-            {isLoading
-              ? 'Loading…'
-              : `${filtered.length} of ${entries.length} entries`}
+            {isLoading ? (
+              'Loading…'
+            ) : (
+              <>
+                {filtered.length} of {entries.length} entries
+                {' · '}
+                <span className="font-semibold text-gray-900">{formatHours(totalHours)}</span>
+                {' total'}
+              </>
+            )}
           </p>
         </div>
         <div className="flex gap-2">
