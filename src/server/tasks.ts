@@ -20,10 +20,15 @@ const TaskFieldsSchema = z.object({
   poNumber: z.string().optional(),
   client: z.string().optional(),
   approver: z.string().optional(),
+  type: z.string().optional(),
+  timesheetSubmit: z.string().optional(),
 })
 
 export const createTask = createServerFn({ method: 'POST' })
-  .inputValidator(TaskFieldsSchema.extend({ name: z.string().min(1) }))
+  .inputValidator(TaskFieldsSchema.extend({
+    name: z.string().min(1),
+    poLine: z.string().min(1),
+  }))
   .handler(async ({ data }): Promise<AppTask> => {
     await requireAdmin()
     return prisma.task.create({ data })
@@ -33,6 +38,7 @@ export const updateTask = createServerFn({ method: 'POST' })
   .inputValidator(TaskFieldsSchema.extend({
     id: z.string(),
     name: z.string().min(1).optional(),
+    poLine: z.string().min(1).optional(),
     active: z.boolean().optional(),
   }))
   .handler(async ({ data }): Promise<AppTask> => {

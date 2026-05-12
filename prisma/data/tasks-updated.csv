@@ -1,0 +1,23 @@
+﻿ClientJobNo,PO,Client,Approver,Project,Status,Type,TimesheetSubmit,PO_Line,description
+,208,ACE,Sheri Allred,Chuckanut Trails,Active,Reg,,208,
+,1000,ACE,Pete Allred,ACE_Administration,Active,Reg,,1000,
+,1010,ACE,Pete Allred,ACE_Marketing / Sales,Active,Reg,,1010,
+,1020,ACE,Pete Allred,ACE_OH IT - Software,Active,Reg,,1020,
+,1030,ACE,Pete Allred,ACE_OH Training,Active,Reg,,1030,
+,1050,ACE,Pete Allred,ACE_PTO,Active,PTO,,1050,
+,18548,Haskell Corp.,TJ Butenschoen,Sila 1902 PH,Inactive,Reg,Pete Allred,18548,
+19693,19693,Haskell Corp.,Bob Delgatto,Haskell OH PC Improvements,Active,Reg,Pete Allred,19693_001,Controls Consultant
+19693,19693,Haskell Corp.,Bob Delgatto,Haskell OH PC Improvements,Active,Reg,Pete Allred,19693_002,Software Engineer
+19693,19693,Haskell Corp.,Bob Delgatto,Haskell OH PC Improvements,Active,Reg,Pete Allred,19693_003,Mgmt & Coordination
+19693,19693,Haskell Corp.,Bob Delgatto,Haskell OH PC Improvements,Active,Reg,Pete Allred,19693_004,Remaining Cost Breakdown Structure
+19693,19693,Haskell Corp.,Bob Delgatto,Haskell OH PC Improvements,Active,Reg,Pete Allred,19693_005,Schedule Portfolio
+19693,19693,Haskell Corp.,Bob Delgatto,Haskell OH PC Improvements,Active,Reg,Pete Allred,19693_006,Estimate Form/Web App
+19693,19693,Haskell Corp.,Bob Delgatto,Haskell OH PC Improvements,Active,Reg,Pete Allred,19693_007,Change Log/Web App
+19693,19693,Haskell Corp.,Bob Delgatto,Haskell OH PC Improvements,Active,Reg,Pete Allred,19693_008,Procedures & Recommended Practices
+19693,19693,Haskell Corp.,Bob Delgatto,Haskell OH PC Improvements,Active,Reg,Pete Allred,19693_009,2026 Incentives
+19773,19773,Haskell Corp.,TJ Butenscheon,Sila Non-reimbursable,Active,Reg,Pete Allred,19773_001,Schedule delay
+14800117,19914,Haskell Corp.,TJ Butenschoen,Sila 1904 PH,Active,Reg,Pete Allred,19914,
+4513164387,4513164387,HF Sinclair,Antonio Aguilar,HFS FGRU Artesia,Active,Reg,Pete Allred,4513164387,
+4900732819,4900732819,Marathon,Tom Perry,MPC Planning,Active,Reg,Pete Noel,4900732819,
+,,,,Grand Sierra,Active,Reg,,GS,
+,,ACE,,ACE_Unpaid Time Away,Active,PTO,,ACE_UP,

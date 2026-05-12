@@ -16,41 +16,53 @@ export const Route = createFileRoute('/dashboard/admin/tasks')({
 
 interface TaskFormState {
   name: string
+  poLine: string
   clientJobNum: string
-  description: string
   poNumber: string
   client: string
   approver: string
+  type: string
+  timesheetSubmit: string
+  description: string
 }
 
 const emptyForm: TaskFormState = {
   name: '',
+  poLine: '',
   clientJobNum: '',
-  description: '',
   poNumber: '',
   client: '',
   approver: '',
+  type: '',
+  timesheetSubmit: '',
+  description: '',
 }
 
 function toFormState(task: AppTask): TaskFormState {
   return {
     name: task.name,
+    poLine: task.poLine,
     clientJobNum: task.clientJobNum ?? '',
-    description: task.description ?? '',
     poNumber: task.poNumber ?? '',
     client: task.client ?? '',
     approver: task.approver ?? '',
+    type: task.type ?? '',
+    timesheetSubmit: task.timesheetSubmit ?? '',
+    description: task.description ?? '',
   }
 }
 
 function toPayload(form: TaskFormState) {
   return {
     name: form.name,
+    poLine: form.poLine,
     clientJobNum: form.clientJobNum || undefined,
-    description: form.description || undefined,
     poNumber: form.poNumber || undefined,
     client: form.client || undefined,
     approver: form.approver || undefined,
+    type: form.type || undefined,
+    timesheetSubmit: form.timesheetSubmit || undefined,
+    description: form.description || undefined,
   }
 }
 
@@ -111,19 +123,22 @@ function TasksPage() {
     setForm((prev) => ({ ...prev, [key]: value }))
   }
 
-  const canSubmit = form.name.trim().length > 0
+  const canSubmit = form.name.trim().length > 0 && form.poLine.trim().length > 0
 
   function handleExportCsv() {
     if (tasks.length === 0) return
     const rows: string[][] = [
-      ['Name', 'Client Job #', 'Description', 'PO Number', 'Client', 'Approver', 'Status', 'Created'],
+      ['Project', 'PO Line', 'Client Job #', 'PO', 'Client', 'Approver', 'Type', 'Timesheet Submit', 'Description', 'Status', 'Created'],
       ...tasks.map((t) => [
         t.name,
+        t.poLine,
         t.clientJobNum ?? '',
-        t.description ?? '',
         t.poNumber ?? '',
         t.client ?? '',
         t.approver ?? '',
+        t.type ?? '',
+        t.timesheetSubmit ?? '',
+        t.description ?? '',
         t.active ? 'Active' : 'Inactive',
         formatDate(t.createdAt),
       ]),
@@ -164,14 +179,15 @@ function TasksPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-200 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
-                  <th className="pb-3 pr-4">Name</th>
-                  <th className="pb-3 pr-4">Job #</th>
-                  <th className="pb-3 pr-4">Client</th>
-                  <th className="pb-3 pr-4">PO Number</th>
-                  <th className="pb-3 pr-4">Approver</th>
+                  <th className="pb-3 pr-4">Project</th>
+                  <th className="pb-3 pr-4">PO Line</th>
                   <th className="pb-3 pr-4">Description</th>
+                  <th className="pb-3 pr-4">Client</th>
+                  <th className="pb-3 pr-4">PO</th>
+                  <th className="pb-3 pr-4">Approver</th>
+                  <th className="pb-3 pr-4">Type</th>
+                  <th className="pb-3 pr-4">Submit</th>
                   <th className="pb-3 pr-4">Status</th>
-                  <th className="pb-3 pr-4">Created</th>
                   <th className="pb-3">Actions</th>
                 </tr>
               </thead>
@@ -179,17 +195,18 @@ function TasksPage() {
                 {tasks.map((task) => (
                   <tr key={task.id} className="hover:bg-gray-50">
                     <td className="py-3 pr-4 font-medium text-gray-900">{task.name}</td>
-                    <td className="py-3 pr-4 text-gray-500 font-mono text-xs">{task.clientJobNum ?? '—'}</td>
+                    <td className="py-3 pr-4 text-gray-500 font-mono text-xs">{task.poLine}</td>
+                    <td className="py-3 pr-4 text-gray-500">{task.description ?? '—'}</td>
                     <td className="py-3 pr-4 text-gray-500">{task.client ?? '—'}</td>
                     <td className="py-3 pr-4 text-gray-500 font-mono text-xs">{task.poNumber ?? '—'}</td>
                     <td className="py-3 pr-4 text-gray-500">{task.approver ?? '—'}</td>
-                    <td className="py-3 pr-4 text-gray-500">{task.description ?? '—'}</td>
+                    <td className="py-3 pr-4 text-gray-500">{task.type ?? '—'}</td>
+                    <td className="py-3 pr-4 text-gray-500">{task.timesheetSubmit ?? '—'}</td>
                     <td className="py-3 pr-4">
                       <Badge variant={task.active ? 'green' : 'gray'}>
                         {task.active ? 'Active' : 'Inactive'}
                       </Badge>
                     </td>
-                    <td className="py-3 pr-4 text-gray-500">{formatDate(task.createdAt)}</td>
                     <td className="py-3">
                       <div className="flex gap-1">
                         <button onClick={() => openEdit(task)} className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-700">
@@ -253,12 +270,17 @@ interface TaskFormProps {
 function TaskForm({ form, setField, error, loading, disabled, onCancel, onSubmit, submitLabel }: TaskFormProps) {
   return (
     <div className="space-y-4">
-      <Input label="Task name" value={form.name} onChange={(e) => setField('name', e.target.value)} required />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <Input label="Project" value={form.name} onChange={(e) => setField('name', e.target.value)} required />
+        <Input label="PO Line (unique)" value={form.poLine} onChange={(e) => setField('poLine', e.target.value)} required />
+      </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Input label="Client job #" value={form.clientJobNum} onChange={(e) => setField('clientJobNum', e.target.value)} />
-        <Input label="PO Number" value={form.poNumber} onChange={(e) => setField('poNumber', e.target.value)} />
+        <Input label="PO" value={form.poNumber} onChange={(e) => setField('poNumber', e.target.value)} />
         <Input label="Client" value={form.client} onChange={(e) => setField('client', e.target.value)} />
         <Input label="Approver" value={form.approver} onChange={(e) => setField('approver', e.target.value)} />
+        <Input label="Type (Reg / PTO)" value={form.type} onChange={(e) => setField('type', e.target.value)} />
+        <Input label="Timesheet submit" value={form.timesheetSubmit} onChange={(e) => setField('timesheetSubmit', e.target.value)} />
       </div>
       <Input label="Description" value={form.description} onChange={(e) => setField('description', e.target.value)} />
       {error && <p className="text-sm text-red-600">{error}</p>}

@@ -43,9 +43,32 @@ function parseBool(s: string | undefined): boolean {
   return (s ?? '').trim().toUpperCase() === 'TRUE'
 }
 
+function parseStatusActive(s: string | undefined): boolean {
+  return (s ?? '').trim().toLowerCase() === 'active'
+}
+
 function blankToNull(s: string | undefined): string | null {
   const v = (s ?? '').trim()
   return v.length === 0 ? null : v
+}
+
+// Maps old project names referenced by time-entries-5-10.csv → new task poLine
+// in tasks-updated.csv. Time entries CSV predates the new task schema where one
+// project (e.g. "Haskell OH PC Improvements") spans multiple poLines.
+const TIME_ENTRY_PROJECT_TO_PO_LINE: Record<string, string> = {
+  'Chuckanut': '208',
+  'HASK: Change Log Web App': '19693_007',
+  'HASK: Estimate Web App': '19693_006',
+  'HASK: Schedule Portfolio': '19693_005',
+  'HASK: CBS': '19693_004',
+  'HASK: Controls Management': '19693_003',
+  'HASK: Procedures': '19693_008',
+  'HASK: Incentives': '19693_009',
+  'MPC Planning': '4900732819',
+  'HFS FGRU Artesia': '4513164387',
+  'ACE_OH Training': '1030',
+  'Grand Sierra': 'GS',
+  'ACE_Unpaid Time Away': 'ACE_UP',
 }
 
 // Accepts "M/D/YY" or "M/D/YYYY". Returns null for blank/invalid input.
@@ -79,28 +102,32 @@ async function seedUsers() {
 }
 
 async function seedTasks() {
-  const csvPath = join(here, 'data', 'tasks.csv')
+  const csvPath = join(here, 'data', 'tasks-updated.csv')
   const rows = parseCsv(readFileSync(csvPath, 'utf-8'))
 
   for (const row of rows) {
-    if (!row.name) {
-      console.warn(`skipping task row missing name: ${JSON.stringify(row)}`)
+    const project = row.Project
+    const poLine = row.PO_Line
+    if (!project || !poLine) {
+      console.warn(`skipping task row missing Project or PO_Line: ${JSON.stringify(row)}`)
       continue
     }
     const data = {
-      clientJobNum: blankToNull(row.clientJobNum),
+      clientJobNum: blankToNull(row.ClientJobNo),
+      poNumber: blankToNull(row.PO),
+      client: blankToNull(row.Client),
+      approver: blankToNull(row.Approver),
+      type: blankToNull(row.Type),
+      timesheetSubmit: blankToNull(row.TimesheetSubmit),
       description: blankToNull(row.description),
-      poNumber: blankToNull(row.poNum),
-      client: blankToNull(row.client),
-      approver: blankToNull(row.approver),
-      active: parseBool(row.active),
+      active: parseStatusActive(row.Status),
     }
     await prisma.task.upsert({
-      where: { name: row.name },
-      update: data,
-      create: { name: row.name, ...data },
+      where: { poLine },
+      update: { name: project, ...data },
+      create: { poLine, name: project, ...data },
     })
-    console.log(`✔ task  ${row.name}`)
+    console.log(`✔ task  ${poLine}  ${project}${row.description ? `: ${row.description}` : ''}`)
   }
 }
 
@@ -113,11 +140,12 @@ async function seedTimeEntries() {
   const users = await prisma.user.findMany()
   const userByClerkId = new Map(users.map((u) => [u.clerkId, u.id]))
   const tasks = await prisma.task.findMany()
-  const taskByName = new Map(tasks.map((t) => [t.name, t.id]))
+  const taskByPoLine = new Map(tasks.map((t) => [t.poLine, t]))
 
   let inserted = 0
   let updated = 0
   let skipped = 0
+  let unmappedTasks = 0
 
   for (const row of rows) {
     const clerkId = row.userId
@@ -136,11 +164,23 @@ async function seedTimeEntries() {
       skipped++
       continue
     }
-    const taskId = taskByName.get(projectName) ?? null
+
+    // Translate old project names in the time-entries CSV to the new task's
+    // poLine. If the project name has no mapping or the task no longer exists,
+    // record the entry with taskId=null but preserve the original projectName.
+    const poLine = TIME_ENTRY_PROJECT_TO_PO_LINE[projectName]
+    const task = poLine ? taskByPoLine.get(poLine) : undefined
+    const taskId = task?.id ?? null
+    const taskName = task?.name ?? projectName
+    if (!task) {
+      console.warn(`time-entry project "${projectName}" has no matching task — entry stored with taskId=null`)
+      unmappedTasks++
+    }
+
     const data = {
       userId,
       taskId,
-      taskName: projectName,
+      taskName,
       weekEnding,
       workDate,
       totalHours,
@@ -148,10 +188,13 @@ async function seedTimeEntries() {
       approved: true,
     }
 
-    // Match by user + workDate + taskName + hours. If found, sync the CSV-driven
-    // fields onto the existing row; otherwise insert a new one.
+    // Match existing rows by user + workDate + totalHours and EITHER the old
+    // CSV project name or the new task name. Necessary because previously-
+    // seeded rows carry the old name; after this run they'll carry the new one.
+    const candidateTaskNames = [projectName]
+    if (task && task.name !== projectName) candidateTaskNames.push(task.name)
     const existing = await prisma.timeEntry.findFirst({
-      where: { userId, workDate, taskName: projectName, totalHours },
+      where: { userId, workDate, totalHours, taskName: { in: candidateTaskNames } },
     })
     if (existing) {
       await prisma.timeEntry.update({ where: { id: existing.id }, data })
@@ -161,7 +204,7 @@ async function seedTimeEntries() {
       inserted++
     }
   }
-  console.log(`✔ time entries  inserted=${inserted}  updated=${updated}  skipped=${skipped}`)
+  console.log(`✔ time entries  inserted=${inserted}  updated=${updated}  skipped=${skipped}  unmappedTasks=${unmappedTasks}`)
 }
 
 async function main() {

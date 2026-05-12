@@ -18,11 +18,14 @@ export const Route = createFileRoute('/dashboard/admin/time-entries')({
 type StatusFilter = 'all' | 'pending' | 'approved' | 'flagged'
 
 const NO_WEEK = '__none__'
+const NO_PO = '__none__'
 
 function AllTimeEntriesPage() {
   const [weekEnding, setWeekEnding] = useState('')
   const [userId, setUserId] = useState('')
   const [taskName, setTaskName] = useState('')
+  const [poNumber, setPoNumber] = useState('')
+  const [poLine, setPoLine] = useState('')
   const [status, setStatus] = useState<StatusFilter>('all')
 
   const { data: entries = [], isLoading } = useQuery<AppTimeEntryWithUser[]>({
@@ -63,6 +66,36 @@ function AllTimeEntriesPage() {
     return users.filter((u) => ids.has(u.id)).sort((a, b) => a.name.localeCompare(b.name))
   }, [entries, users])
 
+  // PO + PO Line come from the linked task. Entries with no linked task fall
+  // into the "(none)" bucket which only appears when at least one such entry
+  // is present.
+  const poOptions = useMemo(() => {
+    const set = new Set<string>()
+    let hasNone = false
+    for (const e of entries) {
+      if (e.task?.poNumber) set.add(e.task.poNumber)
+      else hasNone = true
+    }
+    return { values: [...set].sort(), hasNone }
+  }, [entries])
+
+  const poLineOptions = useMemo(() => {
+    // Scope the PO Line options to the currently-selected PO so users don't
+    // see lines from other POs.
+    const set = new Set<string>()
+    let hasNone = false
+    for (const e of entries) {
+      if (poNumber === NO_PO) {
+        if (e.task?.poNumber) continue
+      } else if (poNumber && e.task?.poNumber !== poNumber) {
+        continue
+      }
+      if (e.task?.poLine) set.add(e.task.poLine)
+      else hasNone = true
+    }
+    return { values: [...set].sort(), hasNone }
+  }, [entries, poNumber])
+
   const filtered = useMemo(() => {
     return entries.filter((e) => {
       if (userId && e.userId !== userId) return false
@@ -75,22 +108,35 @@ function AllTimeEntriesPage() {
           if (we !== weekEnding) return false
         }
       }
+      if (poNumber) {
+        if (poNumber === NO_PO) {
+          if (e.task?.poNumber) return false
+        } else if (e.task?.poNumber !== poNumber) return false
+      }
+      if (poLine && e.task?.poLine !== poLine) return false
       if (status === 'approved' && !e.approved) return false
       if (status === 'flagged' && !e.flagged) return false
       if (status === 'pending' && (e.approved || e.flagged)) return false
       return true
     })
-  }, [entries, userId, taskName, weekEnding, status])
+  }, [entries, userId, taskName, weekEnding, poNumber, poLine, status])
 
   const totalHours = useMemo(
     () => filtered.reduce((s, e) => s + e.totalHours, 0),
     [filtered],
   )
 
-  const activeFilters = !!(userId || taskName || weekEnding || status !== 'all')
+  const activeFilters = !!(userId || taskName || weekEnding || poNumber || poLine || status !== 'all')
 
   function clearFilters() {
-    setWeekEnding(''); setUserId(''); setTaskName(''); setStatus('all')
+    setWeekEnding(''); setUserId(''); setTaskName(''); setPoNumber(''); setPoLine(''); setStatus('all')
+  }
+
+  // Changing PO invalidates any PO Line that doesn't belong to it — clear it
+  // alongside the PO change so the UI never shows a stale-line selection.
+  function handlePoChange(next: string) {
+    setPoNumber(next)
+    setPoLine('')
   }
 
   // Filter snapshot used by both exports — keeps CSV/PDF/filename consistent.
@@ -98,21 +144,21 @@ function AllTimeEntriesPage() {
     weekEnding: weekEnding && weekEnding !== NO_WEEK ? formatDate(weekEnding) : weekEnding === NO_WEEK ? '(no week ending)' : undefined,
     employeeName: userId ? userMap[userId] : undefined,
     taskName: taskName || undefined,
+    poNumber: poNumber === NO_PO ? '(no PO)' : poNumber || undefined,
+    poLine: poLine || undefined,
     status: status !== 'all' ? status : undefined,
   }
 
   function handleExportCsv() {
     if (filtered.length === 0) return
     const rows: string[][] = [
-      ['Employee', 'Date', 'Week Ending', 'Task', 'Hours', 'Status', 'Description'],
+      ['Date', 'Employee Name', 'PO Line', 'Description', 'Total Hours'],
       ...filtered.map((e) => [
-        userMap[e.userId] ?? e.user?.name ?? '',
         formatDate(entryDate(e)),
-        e.weekEnding ? formatDate(e.weekEnding) : '',
-        e.taskName,
-        formatHours(e.totalHours),
-        e.approved ? 'Approved' : e.flagged ? 'Flagged' : 'Pending',
+        userMap[e.userId] ?? e.user?.name ?? '',
+        e.task?.poLine ?? '',
         e.workDescription ?? '',
+        formatHours(e.totalHours),
       ]),
     ]
     const suffix = [
@@ -163,7 +209,7 @@ function AllTimeEntriesPage() {
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 mb-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           <Select label="Week ending" value={weekEnding} onChange={(e) => setWeekEnding(e.target.value)}>
             <option value="">All weeks</option>
             {weekOptions.weeks.map((w) => (
@@ -181,6 +227,19 @@ function AllTimeEntriesPage() {
             <option value="">All tasks</option>
             {taskOptions.map((t) => (
               <option key={t} value={t}>{t}</option>
+            ))}
+          </Select>
+          <Select label="PO" value={poNumber} onChange={(e) => handlePoChange(e.target.value)}>
+            <option value="">All POs</option>
+            {poOptions.values.map((p) => (
+              <option key={p} value={p}>{p}</option>
+            ))}
+            {poOptions.hasNone && <option value={NO_PO}>(no PO)</option>}
+          </Select>
+          <Select label="PO Line" value={poLine} onChange={(e) => setPoLine(e.target.value)}>
+            <option value="">All PO Lines</option>
+            {poLineOptions.values.map((p) => (
+              <option key={p} value={p}>{p}</option>
             ))}
           </Select>
           <Select label="Status" value={status} onChange={(e) => setStatus(e.target.value as StatusFilter)}>

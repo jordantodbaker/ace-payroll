@@ -7,6 +7,8 @@ export interface TimeEntriesPdfFilters {
   weekEnding?: string
   employeeName?: string
   taskName?: string
+  poNumber?: string
+  poLine?: string
   status?: string
 }
 
@@ -36,6 +38,8 @@ export function exportTimeEntriesPdf(
   if (filters.weekEnding) filterLines.push(`Week ending: ${filters.weekEnding}`)
   if (filters.employeeName) filterLines.push(`Employee: ${filters.employeeName}`)
   if (filters.taskName) filterLines.push(`Task: ${filters.taskName}`)
+  if (filters.poNumber) filterLines.push(`PO: ${filters.poNumber}`)
+  if (filters.poLine) filterLines.push(`PO Line: ${filters.poLine}`)
   if (filters.status && filters.status !== 'all') filterLines.push(`Status: ${filters.status}`)
   filterLines.push(`Generated: ${formatDate(new Date())}`)
   filterLines.push(`Entries: ${entries.length}`)

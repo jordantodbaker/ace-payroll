@@ -14,11 +14,14 @@ export interface AppUser {
 export interface AppTask {
   id: string
   clientJobNum: string | null
+  poLine: string
+  poNumber: string | null
   name: string
   description: string | null
-  poNumber: string | null
   client: string | null
   approver: string | null
+  type: string | null
+  timesheetSubmit: string | null
   active: boolean
   createdAt: Date
 }
@@ -39,7 +42,7 @@ export interface AppTimeEntry {
 
 export interface AppTimeEntryWithUser extends AppTimeEntry {
   user: { name: string; email: string }
-  task: { name: string } | null
+  task: { name: string; poNumber: string | null; poLine: string } | null
 }
 
 export interface AppTimeEntryWithTask extends AppTimeEntry {

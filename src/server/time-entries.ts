@@ -37,7 +37,7 @@ export const getAllTimeEntries = createServerFn({ method: 'POST' })
       take: data?.limit ?? 100,
       include: {
         user: { select: { name: true, email: true } },
-        task: { select: { name: true } },
+        task: { select: { name: true, poNumber: true, poLine: true } },
       },
     })
     return entries.map((e) => ({ ...toAppTimeEntry(e), user: e.user, task: e.task }))

@@ -24,16 +24,19 @@ model User {
 }
 
 model Task {
-  id           String      @id @default(cuid())
-  clientJobNum String?
-  name         String      @unique
-  description  String?
-  poNumber     String?
-  client       String?
-  approver     String?
-  active       Boolean     @default(true)
-  createdAt    DateTime    @default(now())
-  timeEntries  TimeEntry[]
+  id              String      @id @default(cuid())
+  clientJobNum    String?
+  poLine          String      @unique
+  poNumber        String?
+  name            String
+  description     String?
+  client          String?
+  approver        String?
+  type            String?
+  timesheetSubmit String?
+  active          Boolean     @default(true)
+  createdAt       DateTime    @default(now())
+  timeEntries     TimeEntry[]
 }
 
 model TimeEntry {

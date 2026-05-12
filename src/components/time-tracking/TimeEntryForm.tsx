@@ -95,7 +95,9 @@ export function TimeEntryForm({ entry, onSuccess, onCancel }: TimeEntryFormProps
       >
         <option value="">Select task...</option>
         {tasks.map((t) => (
-          <option key={t.id} value={t.id}>{t.name}</option>
+          <option key={t.id} value={t.id}>
+            {t.description ? `${t.name} — ${t.description}` : t.name}
+          </option>
         ))}
         <option value="__custom">Custom task...</option>
       </Select>
