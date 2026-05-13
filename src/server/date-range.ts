@@ -16,3 +16,20 @@ function parseLocalDate(yyyymmdd: string): Date {
   const [y, m, d] = yyyymmdd.split('-').map(Number)
   return new Date(y, m - 1, d)
 }
+
+// 'YYYY-MM-DD' from a <input type="date">. Anchor to noon local time so the
+// stored DateTime renders as the same calendar day regardless of viewer TZ.
+export function parseWorkDate(s: string): Date {
+  const [y, m, d] = s.split('-').map(Number)
+  return new Date(y, m - 1, d, 12)
+}
+
+// A "week" is Mon–Sun, so weekEnding is the Sunday on or after the workDate.
+// Sunday workDate maps to itself (it's already the last day of its week).
+export function weekEndingFor(workDate: Date): Date {
+  const sunday = new Date(workDate)
+  const day = sunday.getDay() // 0 = Sun, 6 = Sat
+  const daysUntilSunday = day === 0 ? 0 : 7 - day
+  sunday.setDate(sunday.getDate() + daysUntilSunday)
+  return sunday
+}

@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { prisma } from '#/lib/prisma'
 import { requireAdmin, requireUser } from '#/server/auth-helpers'
 import { toAppTimeEntry } from '#/server/serialize'
-import { timeEntryDateRangeWhere } from '#/server/date-range'
+import { parseWorkDate, timeEntryDateRangeWhere, weekEndingFor } from '#/server/date-range'
 import type { AppTimeEntry, AppTimeEntryWithUser, AppTimeEntryWithTask } from '#/lib/types'
 
 export const getMyTimeEntries = createServerFn().handler(async (): Promise<AppTimeEntryWithTask[]> => {
@@ -43,23 +43,7 @@ export const getAllTimeEntries = createServerFn({ method: 'POST' })
     return entries.map((e) => ({ ...toAppTimeEntry(e), user: e.user, task: e.task }))
   })
 
-// 'YYYY-MM-DD' from a <input type="date">. Anchor to noon local time so the
-// stored DateTime renders as the same calendar day regardless of viewer TZ.
 const WorkDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'expected YYYY-MM-DD')
-function parseWorkDate(s: string): Date {
-  const [y, m, d] = s.split('-').map(Number)
-  return new Date(y, m - 1, d, 12)
-}
-
-// A "week" is Mon–Sun, so weekEnding is the Sunday on or after the workDate.
-// Sunday workDate maps to itself (it's already the last day of its week).
-function weekEndingFor(workDate: Date): Date {
-  const sunday = new Date(workDate)
-  const day = sunday.getDay() // 0 = Sun, 6 = Sat
-  const daysUntilSunday = day === 0 ? 0 : 7 - day
-  sunday.setDate(sunday.getDate() + daysUntilSunday)
-  return sunday
-}
 
 export const createTimeEntry = createServerFn({ method: 'POST' })
   .inputValidator(z.object({
