@@ -124,6 +124,17 @@ export const approveTimeEntry = createServerFn({ method: 'POST' })
     return toAppTimeEntry(entry)
   })
 
+export const approveAllTimeEntries = createServerFn({ method: 'POST' })
+  .inputValidator(z.object({ ids: z.array(z.string()).min(1) }))
+  .handler(async ({ data }): Promise<{ count: number }> => {
+    await requireAdmin()
+    const result = await prisma.timeEntry.updateMany({
+      where: { id: { in: data.ids }, approved: false },
+      data: { approved: true },
+    })
+    return { count: result.count }
+  })
+
 export const flagTimeEntry = createServerFn({ method: 'POST' })
   .inputValidator(z.object({ id: z.string(), flagged: z.boolean() }))
   .handler(async ({ data }): Promise<AppTimeEntry> => {

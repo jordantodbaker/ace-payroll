@@ -1,12 +1,13 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
-import { Download, FileText } from 'lucide-react'
-import { getAllTimeEntries } from '#/server/time-entries'
+import { CheckCircle, Download, FileText } from 'lucide-react'
+import { approveAllTimeEntries, getAllTimeEntries } from '#/server/time-entries'
 import { getAllUsers } from '#/server/users'
 import { TimeEntryList } from '#/components/time-tracking/TimeEntryList'
 import { Select } from '#/components/ui/Select'
 import { Button } from '#/components/ui/Button'
+import { Modal } from '#/components/ui/Modal'
 import { downloadCsv, entryDate, formatDate, formatHours } from '#/lib/utils'
 import { exportTimeEntriesPdf } from '#/lib/timeEntriesPdf'
 import type { AppUser, AppTimeEntryWithUser } from '#/lib/types'
@@ -27,6 +28,9 @@ function AllTimeEntriesPage() {
   const [poNumber, setPoNumber] = useState('')
   const [poLine, setPoLine] = useState('')
   const [status, setStatus] = useState<StatusFilter>('all')
+  const [confirmApproveAll, setConfirmApproveAll] = useState(false)
+
+  const qc = useQueryClient()
 
   const { data: entries = [], isLoading } = useQuery<AppTimeEntryWithUser[]>({
     queryKey: ['allTimeEntries', 'full'],
@@ -126,6 +130,22 @@ function AllTimeEntriesPage() {
     [filtered],
   )
 
+  // "Pending" = neither approved nor flagged. Approve All acts only on the
+  // pending entries within the current filtered view.
+  const pendingEntries = useMemo(
+    () => filtered.filter((e) => !e.approved && !e.flagged),
+    [filtered],
+  )
+
+  const approveAllMutation = useMutation({
+    mutationFn: (ids: string[]) => approveAllTimeEntries({ data: { ids } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['allTimeEntries'] })
+      qc.invalidateQueries({ queryKey: ['myTimeEntries'] })
+      setConfirmApproveAll(false)
+    },
+  })
+
   const activeFilters = !!(userId || taskName || weekEnding || poNumber || poLine || status !== 'all')
 
   function clearFilters() {
@@ -195,6 +215,15 @@ function AllTimeEntriesPage() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button
+            onClick={() => setConfirmApproveAll(true)}
+            disabled={isLoading || pendingEntries.length === 0}
+          >
+            <CheckCircle className="w-4 h-4" />
+            <span className="hidden sm:inline">Approve All</span>
+            <span className="sm:hidden">Approve</span>
+            {pendingEntries.length > 0 && ` (${pendingEntries.length})`}
+          </Button>
           <Button variant="secondary" onClick={handleExportCsv} disabled={!canExport}>
             <Download className="w-4 h-4" />
             <span className="hidden sm:inline">Export CSV</span>
@@ -269,6 +298,27 @@ function AllTimeEntriesPage() {
           <TimeEntryList entries={filtered} isAdmin showUser userMap={userMap} />
         )}
       </div>
+
+      <Modal
+        open={confirmApproveAll}
+        onClose={() => setConfirmApproveAll(false)}
+        title="Approve All Pending Entries"
+        size="sm"
+      >
+        <p className="text-sm text-gray-600 mb-4">
+          Approve {pendingEntries.length} pending {pendingEntries.length === 1 ? 'entry' : 'entries'}
+          {activeFilters ? ' matching the current filters' : ''}? This marks each one as approved.
+        </p>
+        <div className="flex gap-2 justify-end">
+          <Button variant="secondary" onClick={() => setConfirmApproveAll(false)}>Cancel</Button>
+          <Button
+            loading={approveAllMutation.isPending}
+            onClick={() => approveAllMutation.mutate(pendingEntries.map((e) => e.id))}
+          >
+            Approve All
+          </Button>
+        </div>
+      </Modal>
     </div>
   )
 }
