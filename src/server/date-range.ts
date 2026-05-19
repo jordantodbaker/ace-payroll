@@ -33,3 +33,19 @@ export function weekEndingFor(workDate: Date): Date {
   sunday.setDate(sunday.getDate() + daysUntilSunday)
   return sunday
 }
+
+const DAY_MS = 86_400_000
+
+// The pay period ending for a workDate, given a known pay-period-end `anchor`
+// date and a period length in `weeks` (bi-weekly = 2). Returns the earliest
+// period-end on or after workDate. Work done on a period-end date belongs to
+// that period. The result keeps the anchor's time-of-day.
+export function payPeriodEndingFor(workDate: Date, anchor: Date, weeks: number): Date {
+  const periodDays = weeks * 7
+  // Whole-day delta; rounding keeps it correct across DST shifts.
+  const days = Math.round((workDate.getTime() - anchor.getTime()) / DAY_MS)
+  const periods = Math.ceil(days / periodDays)
+  const result = new Date(anchor)
+  result.setDate(result.getDate() + periods * periodDays)
+  return result
+}

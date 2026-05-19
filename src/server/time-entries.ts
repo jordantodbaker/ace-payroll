@@ -3,7 +3,8 @@ import { z } from 'zod'
 import { prisma } from '#/lib/prisma'
 import { requireAdmin, requireUser } from '#/server/auth-helpers'
 import { toAppTimeEntry } from '#/server/serialize'
-import { parseWorkDate, timeEntryDateRangeWhere, weekEndingFor } from '#/server/date-range'
+import { parseWorkDate, payPeriodEndingFor, timeEntryDateRangeWhere, weekEndingFor } from '#/server/date-range'
+import { loadPayPeriodConfig } from '#/server/settings'
 import type { AppTimeEntry, AppTimeEntryWithUser, AppTimeEntryWithTask } from '#/lib/types'
 
 export const getMyTimeEntries = createServerFn().handler(async (): Promise<AppTimeEntryWithTask[]> => {
@@ -56,6 +57,7 @@ export const createTimeEntry = createServerFn({ method: 'POST' })
   .handler(async ({ data }): Promise<AppTimeEntry> => {
     const user = await requireUser()
     const workDate = parseWorkDate(data.workDate)
+    const cfg = await loadPayPeriodConfig()
     const entry = await prisma.timeEntry.create({
       data: {
         userId: user.id,
@@ -64,6 +66,7 @@ export const createTimeEntry = createServerFn({ method: 'POST' })
         totalHours: data.hours,
         workDate,
         weekEnding: weekEndingFor(workDate),
+        payPeriodEnding: payPeriodEndingFor(workDate, cfg.payPeriodAnchor, cfg.payPeriodWeeks),
         workDescription: data.workDescription,
       },
     })
@@ -87,6 +90,15 @@ export const updateTimeEntry = createServerFn({ method: 'POST' })
       throw new Error('Cannot edit this entry')
     }
     const newWorkDate = data.workDate ? parseWorkDate(data.workDate) : undefined
+    // Recompute weekEnding + payPeriodEnding only when workDate actually
+    // changed, to avoid overwriting manually-set values (e.g. seeded data).
+    let derivedWeekEnding: Date | undefined
+    let derivedPayPeriodEnding: Date | undefined
+    if (newWorkDate) {
+      const cfg = await loadPayPeriodConfig()
+      derivedWeekEnding = weekEndingFor(newWorkDate)
+      derivedPayPeriodEnding = payPeriodEndingFor(newWorkDate, cfg.payPeriodAnchor, cfg.payPeriodWeeks)
+    }
     const updated = await prisma.timeEntry.update({
       where: { id: data.id },
       data: {
@@ -94,9 +106,8 @@ export const updateTimeEntry = createServerFn({ method: 'POST' })
         taskName: data.taskName,
         totalHours: data.hours,
         workDate: newWorkDate,
-        // Recompute weekEnding only when workDate actually changed, to avoid
-        // overwriting a manually-set weekEnding (e.g. seeded data).
-        weekEnding: newWorkDate ? weekEndingFor(newWorkDate) : undefined,
+        weekEnding: derivedWeekEnding,
+        payPeriodEnding: derivedPayPeriodEnding,
         workDescription: data.workDescription,
       },
     })

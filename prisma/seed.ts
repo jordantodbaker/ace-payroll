@@ -9,9 +9,15 @@ import {
   parseDate,
   parseStatusActive,
 } from './seed-helpers'
+import { payPeriodEndingFor } from '../src/server/date-range'
 
 const prisma = new PrismaClient()
 const here = dirname(fileURLToPath(import.meta.url))
+
+// Default pay period: bi-weekly, anchored on Friday 2026-05-15. Must match the
+// defaults in src/server/settings.ts.
+const PAY_PERIOD_ANCHOR = new Date(2026, 4, 15, 12)
+const PAY_PERIOD_WEEKS = 2
 
 // Maps old project names referenced by time-entries-5-10.csv → new task poLine
 // in tasks-updated.csv. Time entries CSV predates the new task schema where one
@@ -132,6 +138,9 @@ async function seedTimeEntries() {
       taskId,
       taskName,
       weekEnding,
+      payPeriodEnding: workDate
+        ? payPeriodEndingFor(workDate, PAY_PERIOD_ANCHOR, PAY_PERIOD_WEEKS)
+        : null,
       workDate,
       totalHours,
       workDescription: blankToNull(row.workDescription),
@@ -225,11 +234,42 @@ async function reconcileTimeEntryTasks() {
   console.log(`✔ reconcile taskIds  deleted=${deleted}  relinked=${relinked}  leftAlone=${leftAlone}`)
 }
 
+// Create the singleton AppConfig row if missing. `update: {}` so a re-seed
+// never clobbers a pay-period schedule the admin has changed in the app.
+async function seedAppConfig() {
+  await prisma.appConfig.upsert({
+    where: { id: 'singleton' },
+    update: {},
+    create: { id: 'singleton', payPeriodAnchor: PAY_PERIOD_ANCHOR, payPeriodWeeks: PAY_PERIOD_WEEKS },
+  })
+  console.log('✔ app config  (pay period: bi-weekly, anchor 2026-05-15)')
+}
+
+// Backfill payPeriodEnding on any entry that has a workDate but no pay period
+// yet — e.g. UI-created entries, or rows from before the field existed.
+async function backfillPayPeriods() {
+  const gaps = await prisma.timeEntry.findMany({
+    where: { payPeriodEnding: null, workDate: { not: null } },
+    select: { id: true, workDate: true },
+  })
+  let count = 0
+  for (const e of gaps) {
+    await prisma.timeEntry.update({
+      where: { id: e.id },
+      data: { payPeriodEnding: payPeriodEndingFor(e.workDate!, PAY_PERIOD_ANCHOR, PAY_PERIOD_WEEKS) },
+    })
+    count++
+  }
+  console.log(`✔ backfill payPeriodEnding  updated=${count}`)
+}
+
 async function main() {
+  await seedAppConfig()
   await seedUsers()
   await seedTasks()
   await seedTimeEntries()
   await reconcileTimeEntryTasks()
+  await backfillPayPeriods()
 }
 
 main()

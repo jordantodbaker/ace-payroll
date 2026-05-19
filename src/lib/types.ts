@@ -32,12 +32,18 @@ export interface AppTimeEntry {
   taskId: string | null
   taskName: string
   weekEnding: Date | null
+  payPeriodEnding: Date | null
   workDate: Date | null
   totalHours: number
   workDescription: string | null
   approved: boolean
   flagged: boolean
   createdAt: Date
+}
+
+export interface AppPayPeriodConfig {
+  payPeriodAnchor: Date
+  payPeriodWeeks: number
 }
 
 export interface AppTimeEntryWithUser extends AppTimeEntry {

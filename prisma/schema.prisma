@@ -45,6 +45,7 @@ model TimeEntry {
   taskId          String?
   taskName        String
   weekEnding      DateTime?
+  payPeriodEnding DateTime?
   workDate        DateTime?
   totalHours      Decimal   @db.Decimal(10, 4)
   workDescription String?
@@ -53,4 +54,12 @@ model TimeEntry {
   createdAt       DateTime  @default(now())
   user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   task            Task?     @relation(fields: [taskId], references: [id], onDelete: SetNull)
+}
+
+// Singleton app configuration — always exactly one row (id = "singleton").
+model AppConfig {
+  id               String   @id @default("singleton")
+  payPeriodAnchor  DateTime
+  payPeriodWeeks   Int      @default(2)
+  updatedAt        DateTime @updatedAt
 }

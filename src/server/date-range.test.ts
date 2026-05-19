@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseWorkDate, timeEntryDateRangeWhere, weekEndingFor } from './date-range'
+import { parseWorkDate, payPeriodEndingFor, timeEntryDateRangeWhere, weekEndingFor } from './date-range'
 
 describe('parseWorkDate', () => {
   it('parses YYYY-MM-DD to a Date anchored at local noon', () => {
@@ -51,6 +51,58 @@ describe('weekEndingFor', () => {
     const before = monday.getTime()
     weekEndingFor(monday)
     expect(monday.getTime()).toBe(before)
+  })
+})
+
+describe('payPeriodEndingFor', () => {
+  // Bi-weekly schedule anchored on Friday 2026-05-15.
+  const anchor = new Date(2026, 4, 15, 12)
+  const weeks = 2
+
+  it('maps the anchor date to itself', () => {
+    const r = payPeriodEndingFor(new Date(2026, 4, 15, 12), anchor, weeks)
+    expect(r.getMonth()).toBe(4)
+    expect(r.getDate()).toBe(15)
+  })
+
+  it('rolls a date just after the anchor into the next period', () => {
+    // 2026-05-16 → next period ends 2026-05-29.
+    const r = payPeriodEndingFor(new Date(2026, 4, 16, 12), anchor, weeks)
+    expect(r.getMonth()).toBe(4)
+    expect(r.getDate()).toBe(29)
+  })
+
+  it('keeps a date within the anchor period on the anchor end', () => {
+    // 2026-05-02 is inside the period 2026-05-02..2026-05-15.
+    const r = payPeriodEndingFor(new Date(2026, 4, 2, 12), anchor, weeks)
+    expect(r.getDate()).toBe(15)
+  })
+
+  it('maps the prior period-end to itself', () => {
+    // 2026-05-01 is exactly one period before the anchor.
+    const r = payPeriodEndingFor(new Date(2026, 4, 1, 12), anchor, weeks)
+    expect(r.getMonth()).toBe(4)
+    expect(r.getDate()).toBe(1)
+  })
+
+  it('handles dates several periods before the anchor, crossing months', () => {
+    // 2026-04-30 → period ending 2026-05-01.
+    const r = payPeriodEndingFor(new Date(2026, 3, 30, 12), anchor, weeks)
+    expect(r.getMonth()).toBe(4)
+    expect(r.getDate()).toBe(1)
+  })
+
+  it('lands every result on the same weekday as the anchor (Friday)', () => {
+    const anchorDay = anchor.getDay()
+    for (const d of [new Date(2026, 4, 20, 12), new Date(2026, 5, 3, 12), new Date(2026, 3, 10, 12)]) {
+      expect(payPeriodEndingFor(d, anchor, weeks).getDay()).toBe(anchorDay)
+    }
+  })
+
+  it('does not mutate the anchor', () => {
+    const before = anchor.getTime()
+    payPeriodEndingFor(new Date(2026, 6, 1, 12), anchor, weeks)
+    expect(anchor.getTime()).toBe(before)
   })
 })
 

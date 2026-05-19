@@ -19,8 +19,7 @@ import { Route as DashboardEmployeeIndexRouteImport } from './routes/dashboard/e
 import { Route as DashboardAdminIndexRouteImport } from './routes/dashboard/admin/index'
 import { Route as DashboardEmployeeTimeLogRouteImport } from './routes/dashboard/employee/time-log'
 import { Route as DashboardAdminTimeEntriesRouteImport } from './routes/dashboard/admin/time-entries'
-import { Route as DashboardAdminTasksRouteImport } from './routes/dashboard/admin/tasks'
-import { Route as DashboardAdminEmployeesRouteImport } from './routes/dashboard/admin/employees'
+import { Route as DashboardAdminSettingsRouteImport } from './routes/dashboard/admin/settings'
 
 const SignUpRoute = SignUpRouteImport.update({
   id: '/sign-up',
@@ -74,14 +73,9 @@ const DashboardAdminTimeEntriesRoute =
     path: '/time-entries',
     getParentRoute: () => DashboardAdminRoute,
   } as any)
-const DashboardAdminTasksRoute = DashboardAdminTasksRouteImport.update({
-  id: '/tasks',
-  path: '/tasks',
-  getParentRoute: () => DashboardAdminRoute,
-} as any)
-const DashboardAdminEmployeesRoute = DashboardAdminEmployeesRouteImport.update({
-  id: '/employees',
-  path: '/employees',
+const DashboardAdminSettingsRoute = DashboardAdminSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => DashboardAdminRoute,
 } as any)
 
@@ -92,8 +86,7 @@ export interface FileRoutesByFullPath {
   '/sign-up': typeof SignUpRoute
   '/dashboard/admin': typeof DashboardAdminRouteWithChildren
   '/dashboard/': typeof DashboardIndexRoute
-  '/dashboard/admin/employees': typeof DashboardAdminEmployeesRoute
-  '/dashboard/admin/tasks': typeof DashboardAdminTasksRoute
+  '/dashboard/admin/settings': typeof DashboardAdminSettingsRoute
   '/dashboard/admin/time-entries': typeof DashboardAdminTimeEntriesRoute
   '/dashboard/employee/time-log': typeof DashboardEmployeeTimeLogRoute
   '/dashboard/admin/': typeof DashboardAdminIndexRoute
@@ -104,8 +97,7 @@ export interface FileRoutesByTo {
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
   '/dashboard': typeof DashboardIndexRoute
-  '/dashboard/admin/employees': typeof DashboardAdminEmployeesRoute
-  '/dashboard/admin/tasks': typeof DashboardAdminTasksRoute
+  '/dashboard/admin/settings': typeof DashboardAdminSettingsRoute
   '/dashboard/admin/time-entries': typeof DashboardAdminTimeEntriesRoute
   '/dashboard/employee/time-log': typeof DashboardEmployeeTimeLogRoute
   '/dashboard/admin': typeof DashboardAdminIndexRoute
@@ -119,8 +111,7 @@ export interface FileRoutesById {
   '/sign-up': typeof SignUpRoute
   '/dashboard/admin': typeof DashboardAdminRouteWithChildren
   '/dashboard/': typeof DashboardIndexRoute
-  '/dashboard/admin/employees': typeof DashboardAdminEmployeesRoute
-  '/dashboard/admin/tasks': typeof DashboardAdminTasksRoute
+  '/dashboard/admin/settings': typeof DashboardAdminSettingsRoute
   '/dashboard/admin/time-entries': typeof DashboardAdminTimeEntriesRoute
   '/dashboard/employee/time-log': typeof DashboardEmployeeTimeLogRoute
   '/dashboard/admin/': typeof DashboardAdminIndexRoute
@@ -135,8 +126,7 @@ export interface FileRouteTypes {
     | '/sign-up'
     | '/dashboard/admin'
     | '/dashboard/'
-    | '/dashboard/admin/employees'
-    | '/dashboard/admin/tasks'
+    | '/dashboard/admin/settings'
     | '/dashboard/admin/time-entries'
     | '/dashboard/employee/time-log'
     | '/dashboard/admin/'
@@ -147,8 +137,7 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/sign-up'
     | '/dashboard'
-    | '/dashboard/admin/employees'
-    | '/dashboard/admin/tasks'
+    | '/dashboard/admin/settings'
     | '/dashboard/admin/time-entries'
     | '/dashboard/employee/time-log'
     | '/dashboard/admin'
@@ -161,8 +150,7 @@ export interface FileRouteTypes {
     | '/sign-up'
     | '/dashboard/admin'
     | '/dashboard/'
-    | '/dashboard/admin/employees'
-    | '/dashboard/admin/tasks'
+    | '/dashboard/admin/settings'
     | '/dashboard/admin/time-entries'
     | '/dashboard/employee/time-log'
     | '/dashboard/admin/'
@@ -248,33 +236,24 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardAdminTimeEntriesRouteImport
       parentRoute: typeof DashboardAdminRoute
     }
-    '/dashboard/admin/tasks': {
-      id: '/dashboard/admin/tasks'
-      path: '/tasks'
-      fullPath: '/dashboard/admin/tasks'
-      preLoaderRoute: typeof DashboardAdminTasksRouteImport
-      parentRoute: typeof DashboardAdminRoute
-    }
-    '/dashboard/admin/employees': {
-      id: '/dashboard/admin/employees'
-      path: '/employees'
-      fullPath: '/dashboard/admin/employees'
-      preLoaderRoute: typeof DashboardAdminEmployeesRouteImport
+    '/dashboard/admin/settings': {
+      id: '/dashboard/admin/settings'
+      path: '/settings'
+      fullPath: '/dashboard/admin/settings'
+      preLoaderRoute: typeof DashboardAdminSettingsRouteImport
       parentRoute: typeof DashboardAdminRoute
     }
   }
 }
 
 interface DashboardAdminRouteChildren {
-  DashboardAdminEmployeesRoute: typeof DashboardAdminEmployeesRoute
-  DashboardAdminTasksRoute: typeof DashboardAdminTasksRoute
+  DashboardAdminSettingsRoute: typeof DashboardAdminSettingsRoute
   DashboardAdminTimeEntriesRoute: typeof DashboardAdminTimeEntriesRoute
   DashboardAdminIndexRoute: typeof DashboardAdminIndexRoute
 }
 
 const DashboardAdminRouteChildren: DashboardAdminRouteChildren = {
-  DashboardAdminEmployeesRoute: DashboardAdminEmployeesRoute,
-  DashboardAdminTasksRoute: DashboardAdminTasksRoute,
+  DashboardAdminSettingsRoute: DashboardAdminSettingsRoute,
   DashboardAdminTimeEntriesRoute: DashboardAdminTimeEntriesRoute,
   DashboardAdminIndexRoute: DashboardAdminIndexRoute,
 }

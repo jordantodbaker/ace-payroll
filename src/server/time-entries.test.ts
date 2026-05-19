@@ -17,11 +17,17 @@ vi.mock('#/server/auth-helpers', () => ({
 
 // --- Imports under test -----------------------------------------------------
 import { prisma } from '#/lib/prisma'
-import { requireUser } from '#/server/auth-helpers'
-import { createTimeEntry, deleteTimeEntry, updateTimeEntry } from './time-entries'
+import { requireAdmin, requireUser } from '#/server/auth-helpers'
+import {
+  approveAllTimeEntries,
+  createTimeEntry,
+  deleteTimeEntry,
+  updateTimeEntry,
+} from './time-entries'
 
 const prismaMock = prisma as unknown as DeepMockProxy<PrismaClient>
 const requireUserMock = vi.mocked(requireUser)
+const requireAdminMock = vi.mocked(requireAdmin)
 
 // --- Helpers ----------------------------------------------------------------
 function makeUser(overrides: Partial<User> = {}): User {
@@ -200,5 +206,45 @@ describe('deleteTimeEntry', () => {
     })
 
     expect(result).toEqual({ success: true })
+  })
+})
+
+describe('approveAllTimeEntries', () => {
+  it('only flips pending entries — scopes updateMany to the ids AND approved:false', async () => {
+    requireAdminMock.mockResolvedValue(makeUser({ role: 'ADMIN' }))
+    prismaMock.timeEntry.updateMany.mockResolvedValue({ count: 2 })
+
+    await (approveAllTimeEntries as unknown as (i: { data: { ids: string[] } }) => Promise<unknown>)({
+      data: { ids: ['e1', 'e2', 'e3'] },
+    })
+
+    expect(prismaMock.timeEntry.updateMany).toHaveBeenCalledWith({
+      where: { id: { in: ['e1', 'e2', 'e3'] }, approved: false },
+      data: { approved: true },
+    })
+  })
+
+  it('returns the count of rows actually updated', async () => {
+    requireAdminMock.mockResolvedValue(makeUser({ role: 'ADMIN' }))
+    // Three ids passed, but only 2 were pending — updateMany reports 2.
+    prismaMock.timeEntry.updateMany.mockResolvedValue({ count: 2 })
+
+    const result = await (approveAllTimeEntries as unknown as (i: { data: { ids: string[] } }) => Promise<{ count: number }>)({
+      data: { ids: ['e1', 'e2', 'e3'] },
+    })
+
+    expect(result).toEqual({ count: 2 })
+  })
+
+  it('requires admin', async () => {
+    requireAdminMock.mockRejectedValue(new Error('Forbidden: admin only'))
+
+    await expect(
+      (approveAllTimeEntries as unknown as (i: { data: { ids: string[] } }) => Promise<unknown>)({
+        data: { ids: ['e1'] },
+      }),
+    ).rejects.toThrow(/admin only/i)
+
+    expect(prismaMock.timeEntry.updateMany).not.toHaveBeenCalled()
   })
 })

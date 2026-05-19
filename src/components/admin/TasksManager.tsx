@@ -1,4 +1,3 @@
-import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Plus, Pencil, Trash2, Download } from 'lucide-react'
@@ -9,10 +8,6 @@ import { Modal } from '#/components/ui/Modal'
 import { Badge } from '#/components/ui/Badge'
 import { downloadCsv, formatDate } from '#/lib/utils'
 import type { AppTask } from '#/lib/types'
-
-export const Route = createFileRoute('/dashboard/admin/tasks')({
-  component: TasksPage,
-})
 
 interface TaskFormState {
   name: string
@@ -66,7 +61,9 @@ function toPayload(form: TaskFormState) {
   }
 }
 
-function TasksPage() {
+// Tasks management panel — the body of the former /dashboard/admin/tasks page,
+// now hosted inside the Settings accordion.
+export function TasksManager() {
   const qc = useQueryClient()
   const [showAdd, setShowAdd] = useState(false)
   const [editing, setEditing] = useState<AppTask | null>(null)
@@ -147,12 +144,9 @@ function TasksPage() {
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl">
-      <div className="flex items-center justify-between gap-3 mb-6 lg:mb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Tasks</h1>
-          <p className="text-sm text-gray-500 mt-1">Manage predefined task categories</p>
-        </div>
+    <div>
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <p className="text-sm text-gray-500">Manage predefined task categories</p>
         <div className="flex gap-2">
           <Button variant="secondary" onClick={handleExportCsv} disabled={tasks.length === 0}>
             <Download className="w-4 h-4" />
@@ -167,65 +161,63 @@ function TasksPage() {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
-        {isLoading ? (
-          <div className="animate-pulse space-y-3">
-            {[1, 2, 3].map((i) => <div key={i} className="h-12 bg-gray-100 rounded" />)}
-          </div>
-        ) : tasks.length === 0 ? (
-          <p className="text-sm text-gray-500 text-center py-8">No tasks yet. Add one to get started.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-200 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
-                  <th className="pb-3 pr-4">Project</th>
-                  <th className="pb-3 pr-4">PO Line</th>
-                  <th className="pb-3 pr-4">Description</th>
-                  <th className="pb-3 pr-4">Client</th>
-                  <th className="pb-3 pr-4">PO</th>
-                  <th className="pb-3 pr-4">Approver</th>
-                  <th className="pb-3 pr-4">Type</th>
-                  <th className="pb-3 pr-4">Submit</th>
-                  <th className="pb-3 pr-4">Status</th>
-                  <th className="pb-3">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {tasks.map((task) => (
-                  <tr key={task.id} className="hover:bg-gray-50">
-                    <td className="py-3 pr-4 font-medium text-gray-900">{task.name}</td>
-                    <td className="py-3 pr-4 text-gray-500 font-mono text-xs">{task.poLine}</td>
-                    <td className="py-3 pr-4 text-gray-500">{task.description ?? '—'}</td>
-                    <td className="py-3 pr-4 text-gray-500">{task.client ?? '—'}</td>
-                    <td className="py-3 pr-4 text-gray-500 font-mono text-xs">{task.poNumber ?? '—'}</td>
-                    <td className="py-3 pr-4 text-gray-500">{task.approver ?? '—'}</td>
-                    <td className="py-3 pr-4 text-gray-500">{task.type ?? '—'}</td>
-                    <td className="py-3 pr-4 text-gray-500">{task.timesheetSubmit ?? '—'}</td>
-                    <td className="py-3 pr-4">
-                      <Badge variant={task.active ? 'green' : 'gray'}>
-                        {task.active ? 'Active' : 'Inactive'}
-                      </Badge>
-                    </td>
-                    <td className="py-3">
-                      <div className="flex gap-1">
-                        <button onClick={() => openEdit(task)} className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-700">
-                          <Pencil className="w-4 h-4" />
+      {isLoading ? (
+        <div className="animate-pulse space-y-3">
+          {[1, 2, 3].map((i) => <div key={i} className="h-12 bg-gray-100 rounded" />)}
+        </div>
+      ) : tasks.length === 0 ? (
+        <p className="text-sm text-gray-500 text-center py-8">No tasks yet. Add one to get started.</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-200 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
+                <th className="pb-3 pr-4">Project</th>
+                <th className="pb-3 pr-4">PO Line</th>
+                <th className="pb-3 pr-4">Description</th>
+                <th className="pb-3 pr-4">Client</th>
+                <th className="pb-3 pr-4">PO</th>
+                <th className="pb-3 pr-4">Approver</th>
+                <th className="pb-3 pr-4">Type</th>
+                <th className="pb-3 pr-4">Submit</th>
+                <th className="pb-3 pr-4">Status</th>
+                <th className="pb-3">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {tasks.map((task) => (
+                <tr key={task.id} className="hover:bg-gray-50">
+                  <td className="py-3 pr-4 font-medium text-gray-900">{task.name}</td>
+                  <td className="py-3 pr-4 text-gray-500 font-mono text-xs">{task.poLine}</td>
+                  <td className="py-3 pr-4 text-gray-500">{task.description ?? '—'}</td>
+                  <td className="py-3 pr-4 text-gray-500">{task.client ?? '—'}</td>
+                  <td className="py-3 pr-4 text-gray-500 font-mono text-xs">{task.poNumber ?? '—'}</td>
+                  <td className="py-3 pr-4 text-gray-500">{task.approver ?? '—'}</td>
+                  <td className="py-3 pr-4 text-gray-500">{task.type ?? '—'}</td>
+                  <td className="py-3 pr-4 text-gray-500">{task.timesheetSubmit ?? '—'}</td>
+                  <td className="py-3 pr-4">
+                    <Badge variant={task.active ? 'green' : 'gray'}>
+                      {task.active ? 'Active' : 'Inactive'}
+                    </Badge>
+                  </td>
+                  <td className="py-3">
+                    <div className="flex gap-1">
+                      <button onClick={() => openEdit(task)} className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-700">
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      {task.active && (
+                        <button onClick={() => deleteMutation.mutate(task.id)} className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-red-600">
+                          <Trash2 className="w-4 h-4" />
                         </button>
-                        {task.active && (
-                          <button onClick={() => deleteMutation.mutate(task.id)} className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-red-600">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       <Modal open={showAdd} onClose={() => setShowAdd(false)} title="Add Task" size="md">
         <TaskForm

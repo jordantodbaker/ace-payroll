@@ -3,10 +3,9 @@ import { UserButton, useUser } from '@clerk/tanstack-react-start'
 import {
   Clock,
   LayoutDashboard,
-  Users,
-  ListChecks,
   ClipboardList,
   History,
+  Settings,
   ShieldCheck,
   X,
 } from 'lucide-react'
@@ -35,9 +34,8 @@ const adminSections: NavSection[] = [
     label: 'Admin',
     items: [
       { to: '/dashboard/admin', label: 'Overview', icon: <LayoutDashboard className="w-5 h-5" />, exact: true },
-      { to: '/dashboard/admin/employees', label: 'Employees', icon: <Users className="w-5 h-5" /> },
-      { to: '/dashboard/admin/tasks', label: 'Tasks', icon: <ListChecks className="w-5 h-5" /> },
       { to: '/dashboard/admin/time-entries', label: 'Time Entries', icon: <History className="w-5 h-5" /> },
+      { to: '/dashboard/admin/settings', label: 'Settings', icon: <Settings className="w-5 h-5" /> },
     ],
   },
   {
