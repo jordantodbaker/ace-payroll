@@ -7,6 +7,18 @@ export function formatHours(hours: number | null | undefined): string {
   return `${hours.toFixed(1)}h`
 }
 
+// Display name as "Last, First". The DB stores names in "First Last" order
+// (e.g. "Pete Allred"); this normalizes display + CSV + PDF output. Names
+// with no whitespace are returned unchanged.
+export function formatNameLastFirst(name: string | null | undefined): string {
+  if (!name) return ''
+  const parts = name.trim().split(/\s+/)
+  if (parts.length < 2) return name.trim()
+  const last = parts[parts.length - 1]
+  const first = parts.slice(0, -1).join(' ')
+  return `${last}, ${first}`
+}
+
 // Authoritative "when did this work happen" for a time entry. Prefer workDate
 // (the day work was performed); fall back to createdAt (when the entry was
 // logged) for legacy rows that pre-date the workDate field.

@@ -6,7 +6,7 @@ import { getAllUsers } from '#/server/users'
 import { getAllTimeEntries } from '#/server/time-entries'
 import { TimeEntryList } from '#/components/time-tracking/TimeEntryList'
 import { Select } from '#/components/ui/Select'
-import { formatDate, formatHours } from '#/lib/utils'
+import { formatDate, formatHours, formatNameLastFirst } from '#/lib/utils'
 import type { AppUser, AppTimeEntryWithUser } from '#/lib/types'
 
 export const Route = createFileRoute('/dashboard/admin/')({
@@ -53,7 +53,7 @@ function AdminOverview() {
   const flaggedEntries = filteredEntries.filter((e) => e.flagged)
   const totalHours = filteredEntries.reduce((s, e) => s + e.totalHours, 0)
   const activeEmployeeCount = new Set(filteredEntries.map((e) => e.userId)).size
-  const userMap = Object.fromEntries(users.map((u) => [u.id, u.name]))
+  const userMap = Object.fromEntries(users.map((u) => [u.id, formatNameLastFirst(u.name)]))
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-6xl">

@@ -52,7 +52,7 @@ export const createTimeEntry = createServerFn({ method: 'POST' })
     taskName: z.string().min(1),
     hours: z.number().positive(),
     workDate: WorkDateSchema,
-    workDescription: z.string().optional(),
+    workDescription: z.string().min(1, 'Work description is required'),
   }))
   .handler(async ({ data }): Promise<AppTimeEntry> => {
     const user = await requireUser()
@@ -80,7 +80,9 @@ export const updateTimeEntry = createServerFn({ method: 'POST' })
     taskName: z.string().min(1).optional(),
     hours: z.number().positive().optional(),
     workDate: WorkDateSchema.optional(),
-    workDescription: z.string().optional(),
+    // Optional in the patch shape (don't have to include it), but when present
+    // must be non-empty — an edit can't blank it out.
+    workDescription: z.string().min(1, 'Work description is required').optional(),
   }))
   .handler(async ({ data }): Promise<AppTimeEntry> => {
     const user = await requireUser()

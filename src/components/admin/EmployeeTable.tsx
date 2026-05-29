@@ -6,7 +6,7 @@ import { Select } from '#/components/ui/Select'
 import { Badge } from '#/components/ui/Badge'
 import { Modal } from '#/components/ui/Modal'
 import { updateUserRole, deleteUser } from '#/server/users'
-import { formatDate } from '#/lib/utils'
+import { formatDate, formatNameLastFirst } from '#/lib/utils'
 import type { AppUser } from '#/lib/types'
 
 interface EmployeeTableProps {
@@ -69,7 +69,7 @@ export function EmployeeTable({ employees, currentUserId }: EmployeeTableProps) 
                     ) : (
                       <UserIcon className="w-4 h-4 text-gray-400" />
                     )}
-                    <span className="font-medium text-gray-900">{emp.name}</span>
+                    <span className="font-medium text-gray-900">{formatNameLastFirst(emp.name)}</span>
                     {emp.id === currentUserId && <Badge variant="blue">You</Badge>}
                   </div>
                 </td>
@@ -108,7 +108,7 @@ export function EmployeeTable({ employees, currentUserId }: EmployeeTableProps) 
         <div className="space-y-4">
           <div>
             <p className="text-sm text-gray-500">Employee</p>
-            <p className="font-medium">{editing?.name}</p>
+            <p className="font-medium">{formatNameLastFirst(editing?.name)}</p>
           </div>
           <Select
             label="Role"
@@ -132,7 +132,7 @@ export function EmployeeTable({ employees, currentUserId }: EmployeeTableProps) 
 
       <Modal open={!!confirmDelete} onClose={() => setConfirmDelete(null)} title="Remove Employee" size="sm">
         <p className="text-sm text-gray-600 mb-4">
-          Remove <strong>{confirmDelete?.name}</strong>? This will delete all their time entries.
+          Remove <strong>{formatNameLastFirst(confirmDelete?.name)}</strong>? This will delete all their time entries.
         </p>
         <div className="flex gap-2 justify-end">
           <Button variant="secondary" onClick={() => setConfirmDelete(null)}>Cancel</Button>

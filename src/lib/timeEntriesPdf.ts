@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { entryDate, formatDate, formatHours } from '#/lib/utils'
+import { entryDate, formatDate, formatHours, formatNameLastFirst } from '#/lib/utils'
 import type { AppTimeEntryWithUser } from '#/lib/types'
 
 export interface TimeEntriesPdfFilters {
@@ -58,7 +58,7 @@ export function exportTimeEntriesPdf(
     startY: y + 4,
     head: [['Employee', 'Date', 'Week Ending', 'Task', 'Hours', 'Status', 'Description']],
     body: entries.map((e) => [
-      userMap[e.userId] ?? e.user?.name ?? '—',
+      userMap[e.userId] ?? formatNameLastFirst(e.user?.name) ?? '—',
       formatDate(entryDate(e)),
       e.weekEnding ? formatDate(e.weekEnding) : '—',
       e.taskName,
@@ -85,7 +85,7 @@ export function exportTimeEntriesPdf(
 
   const filenameSuffix = [
     filters.weekEnding && `week-${filters.weekEnding}`,
-    filters.employeeName && `${filters.employeeName.replace(/\s+/g, '-')}`,
+    filters.employeeName && `${filters.employeeName.replace(/[,\s]+/g, '-')}`,
     filters.status && filters.status !== 'all' && filters.status,
   ].filter(Boolean).join('_')
 

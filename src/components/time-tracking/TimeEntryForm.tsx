@@ -52,7 +52,7 @@ export function TimeEntryForm({ entry, onSuccess, onCancel }: TimeEntryFormProps
           taskName,
           hours: hoursNumber,
           workDate,
-          workDescription: workDescription || undefined,
+          workDescription,
         },
       }),
     onSuccess: () => { invalidate(); onSuccess() },
@@ -68,7 +68,7 @@ export function TimeEntryForm({ entry, onSuccess, onCancel }: TimeEntryFormProps
           taskName,
           hours: hoursNumber,
           workDate,
-          workDescription: workDescription || undefined,
+          workDescription,
         },
       }),
     onSuccess: () => { invalidate(); onSuccess() },
@@ -77,7 +77,11 @@ export function TimeEntryForm({ entry, onSuccess, onCancel }: TimeEntryFormProps
 
   const isEditing = !!entry
   const isPending = createMutation.isPending || updateMutation.isPending
-  const canSubmit = taskName.trim() && Number.isFinite(hoursNumber) && hoursNumber > 0
+  const canSubmit =
+    taskName.trim() &&
+    Number.isFinite(hoursNumber) &&
+    hoursNumber > 0 &&
+    workDescription.trim().length > 0
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -127,10 +131,11 @@ export function TimeEntryForm({ entry, onSuccess, onCancel }: TimeEntryFormProps
         required
       />
       <Input
-        label="Work description (optional)"
+        label="Work description"
         value={workDescription}
         onChange={(e) => setWorkDescription(e.target.value)}
         placeholder="What did you work on?"
+        required
       />
       {error && <p className="text-sm text-red-600">{error}</p>}
       <div className="flex gap-2 justify-end">

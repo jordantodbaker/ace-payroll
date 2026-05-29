@@ -8,7 +8,7 @@ import { TimeEntryList } from '#/components/time-tracking/TimeEntryList'
 import { Select } from '#/components/ui/Select'
 import { Button } from '#/components/ui/Button'
 import { Modal } from '#/components/ui/Modal'
-import { downloadCsv, entryDate, formatDate, formatHours } from '#/lib/utils'
+import { downloadCsv, entryDate, formatDate, formatHours, formatNameLastFirst } from '#/lib/utils'
 import { exportTimeEntriesPdf } from '#/lib/timeEntriesPdf'
 import type { AppUser, AppTimeEntryWithUser } from '#/lib/types'
 
@@ -43,7 +43,7 @@ function AllTimeEntriesPage() {
   })
 
   const userMap = useMemo(
-    () => Object.fromEntries(users.map((u) => [u.id, u.name])),
+    () => Object.fromEntries(users.map((u) => [u.id, formatNameLastFirst(u.name)])),
     [users],
   )
 
@@ -175,7 +175,7 @@ function AllTimeEntriesPage() {
       ['Date', 'EmployeeName', 'PO_Line', 'WorkDescription', 'Hours'],
       ...filtered.map((e) => [
         formatDate(entryDate(e)),
-        userMap[e.userId] ?? e.user?.name ?? '',
+        userMap[e.userId] ?? formatNameLastFirst(e.user?.name) ?? '',
         e.task?.poLine ?? '',
         e.workDescription ?? '',
         e.totalHours.toFixed(1),
@@ -183,7 +183,7 @@ function AllTimeEntriesPage() {
     ]
     const suffix = [
       exportFilters.weekEnding && `week-${weekEnding}`,
-      exportFilters.employeeName && exportFilters.employeeName.replace(/\s+/g, '-'),
+      exportFilters.employeeName && exportFilters.employeeName.replace(/[,\s]+/g, '-'),
       exportFilters.status,
     ].filter(Boolean).join('_')
     downloadCsv(`time-entries${suffix ? `-${suffix}` : ''}.csv`, rows)
@@ -249,7 +249,7 @@ function AllTimeEntriesPage() {
           <Select label="Employee" value={userId} onChange={(e) => setUserId(e.target.value)}>
             <option value="">All employees</option>
             {userOptions.map((u) => (
-              <option key={u.id} value={u.id}>{u.name}</option>
+              <option key={u.id} value={u.id}>{formatNameLastFirst(u.name)}</option>
             ))}
           </Select>
           <Select label="Task" value={taskName} onChange={(e) => setTaskName(e.target.value)}>

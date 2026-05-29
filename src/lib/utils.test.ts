@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cn, entryDate, formatDate, formatHours } from './utils'
+import { cn, entryDate, formatDate, formatHours, formatNameLastFirst } from './utils'
 
 describe('cn', () => {
   it('joins string classes with a space', () => {
@@ -39,6 +39,27 @@ describe('formatDate', () => {
   it('renders a Date object', () => {
     const d = new Date(2026, 4, 11, 12)
     expect(formatDate(d)).toBe('May 11, 2026')
+  })
+})
+
+describe('formatNameLastFirst', () => {
+  it('flips a two-part name', () => {
+    expect(formatNameLastFirst('Pete Allred')).toBe('Allred, Pete')
+    expect(formatNameLastFirst('Jordan Baker')).toBe('Baker, Jordan')
+  })
+  it('keeps the trailing word as the surname for 3+ word names', () => {
+    expect(formatNameLastFirst('Mary Ann Smith')).toBe('Smith, Mary Ann')
+  })
+  it('returns single-word names unchanged', () => {
+    expect(formatNameLastFirst('Cher')).toBe('Cher')
+  })
+  it('returns empty string for null/undefined/empty', () => {
+    expect(formatNameLastFirst(null)).toBe('')
+    expect(formatNameLastFirst(undefined)).toBe('')
+    expect(formatNameLastFirst('')).toBe('')
+  })
+  it('trims surrounding whitespace', () => {
+    expect(formatNameLastFirst('  Pete Allred  ')).toBe('Allred, Pete')
   })
 })
 

@@ -9,7 +9,7 @@ import {
   ShieldCheck,
   X,
 } from 'lucide-react'
-import { cn } from '#/lib/utils'
+import { cn, formatNameLastFirst } from '#/lib/utils'
 
 interface NavItem {
   to: string
@@ -108,7 +108,7 @@ export function Sidebar({ role, open, onClose }: SidebarProps) {
         <div className="px-4 py-4 border-t border-gray-700 flex items-center gap-3">
           <UserButton />
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-white truncate">{user?.fullName}</p>
+            <p className="text-sm font-medium text-white truncate">{formatNameLastFirst(user?.fullName)}</p>
             <div className="flex items-center gap-1">
               {role === 'ADMIN' && <ShieldCheck className="w-3 h-3 text-indigo-400" />}
               <p className={cn('text-xs truncate', role === 'ADMIN' ? 'text-indigo-300' : 'text-gray-400')}>
