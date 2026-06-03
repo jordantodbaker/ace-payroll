@@ -54,6 +54,14 @@ function makeUser(overrides: Partial<User> = {}): User {
 beforeEach(() => {
   vi.clearAllMocks()
   mockReset(prismaMock)
+  // updateUserRole/deleteUser wrap their checks in $transaction. The mock client
+  // doesn't implement transactions, so route the callback to the same mock so
+  // findUnique/count/update/delete calls inside the transaction still hit our
+  // configured return values.
+  prismaMock.$transaction.mockImplementation(async (cb: unknown) => {
+    if (typeof cb === 'function') return cb(prismaMock)
+    return Promise.all(cb as Promise<unknown>[])
+  })
 })
 
 // ---------------------------------------------------------------------------

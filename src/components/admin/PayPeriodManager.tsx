@@ -1,19 +1,11 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { getPayPeriodConfig, updatePayPeriodConfig } from '#/server/settings'
-import { payPeriodEndingFor } from '#/server/date-range'
+import { payPeriodEndingFor, toInputDate } from '#/lib/date-utils'
 import { Button } from '#/components/ui/Button'
 import { Input } from '#/components/ui/Input'
 import { formatDate } from '#/lib/utils'
 import type { AppPayPeriodConfig } from '#/lib/types'
-
-function toInputDate(d: Date | string): string {
-  const date = new Date(d)
-  const y = date.getFullYear()
-  const m = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
-}
 
 export function PayPeriodManager() {
   const { data: config, isLoading } = useQuery<AppPayPeriodConfig>({
@@ -42,7 +34,11 @@ function PayPeriodForm({ config }: { config: AppPayPeriodConfig }) {
   const mutation = useMutation({
     mutationFn: () => updatePayPeriodConfig({ data: { anchor, weeks: weeksNumber } }),
     onSuccess: () => {
+      // Recomputing payPeriodEnding on every entry means every time-entry
+      // query result is now stale.
       qc.invalidateQueries({ queryKey: ['payPeriodConfig'] })
+      qc.invalidateQueries({ queryKey: ['myTimeEntries'] })
+      qc.invalidateQueries({ queryKey: ['allTimeEntries'] })
       setError('')
     },
     onError: (e) => setError(String(e)),
@@ -91,7 +87,12 @@ function PayPeriodForm({ config }: { config: AppPayPeriodConfig }) {
 
       {error && <p className="text-sm text-red-600">{error}</p>}
       {mutation.isSuccess && !mutation.isPending && (
-        <p className="text-sm text-green-600">Pay period settings saved.</p>
+        <p className="text-sm text-green-600">
+          Pay period settings saved.
+          {typeof mutation.data?.recomputed === 'number' && (
+            <> {mutation.data.recomputed} entr{mutation.data.recomputed === 1 ? 'y' : 'ies'} recomputed.</>
+          )}
+        </p>
       )}
 
       <div className="flex justify-end">

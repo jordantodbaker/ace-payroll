@@ -49,11 +49,16 @@ model TimeEntry {
   workDate        DateTime?
   totalHours      Decimal   @db.Decimal(10, 4)
   workDescription String?
-  approved        Boolean   @default(false)
-  flagged         Boolean   @default(false)
   createdAt       DateTime  @default(now())
   user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   task            Task?     @relation(fields: [taskId], references: [id], onDelete: SetNull)
+
+  // Speeds up the dominant read patterns: list-ordering by workDate, the
+  // date-range filter, week/pay-period grouping, and per-user dashboards.
+  @@index([workDate])
+  @@index([weekEnding])
+  @@index([payPeriodEnding])
+  @@index([userId, workDate])
 }
 
 // Singleton app configuration — always exactly one row (id = "singleton").

@@ -1,5 +1,6 @@
 import { createServerFn } from '@tanstack/react-start'
 import { clerkClient } from '@clerk/tanstack-react-start/server'
+import { Prisma } from '@prisma/client'
 import { z } from 'zod'
 import { prisma } from '#/lib/prisma'
 import { requireAdmin, requireClerkUserId, requireUser } from '#/server/auth-helpers'
@@ -82,15 +83,19 @@ export const updateUserRole = createServerFn({ method: 'POST' })
   .handler(async ({ data }): Promise<AppUser> => {
     await requireAdmin()
 
-    if (data.role === 'EMPLOYEE') {
-      const target = await prisma.user.findUnique({ where: { id: data.userId } })
-      if (target?.role === 'ADMIN') {
-        const adminCount = await prisma.user.count({ where: { role: 'ADMIN' } })
-        if (adminCount <= 1) throw new Error('Cannot demote the last remaining admin')
+    // Serializable so the "last admin" check and the role change happen atomically;
+    // otherwise two concurrent demotes could each read adminCount=2 and both succeed,
+    // leaving zero admins. Under contention this can throw P2034 — the caller retries.
+    const user = await prisma.$transaction(async (tx) => {
+      if (data.role === 'EMPLOYEE') {
+        const target = await tx.user.findUnique({ where: { id: data.userId } })
+        if (target?.role === 'ADMIN') {
+          const adminCount = await tx.user.count({ where: { role: 'ADMIN' } })
+          if (adminCount <= 1) throw new Error('Cannot demote the last remaining admin')
+        }
       }
-    }
-
-    const user = await prisma.user.update({ where: { id: data.userId }, data: { role: data.role } })
+      return tx.user.update({ where: { id: data.userId }, data: { role: data.role } })
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable })
     return toAppUser(user)
   })
 
@@ -100,12 +105,14 @@ export const deleteUser = createServerFn({ method: 'POST' })
     const me = await requireAdmin()
     if (me.id === data.userId) throw new Error('You cannot delete your own account')
 
-    const target = await prisma.user.findUnique({ where: { id: data.userId } })
-    if (target?.role === 'ADMIN') {
-      const adminCount = await prisma.user.count({ where: { role: 'ADMIN' } })
-      if (adminCount <= 1) throw new Error('Cannot delete the last remaining admin')
-    }
-
-    await prisma.user.delete({ where: { id: data.userId } })
+    // Same atomicity story as updateUserRole — see comment there.
+    await prisma.$transaction(async (tx) => {
+      const target = await tx.user.findUnique({ where: { id: data.userId } })
+      if (target?.role === 'ADMIN') {
+        const adminCount = await tx.user.count({ where: { role: 'ADMIN' } })
+        if (adminCount <= 1) throw new Error('Cannot delete the last remaining admin')
+      }
+      await tx.user.delete({ where: { id: data.userId } })
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable })
     return { success: true }
   })

@@ -19,6 +19,12 @@ export function formatNameLastFirst(name: string | null | undefined): string {
   return `${last}, ${first}`
 }
 
+// Build the userId → display-name map used by every page that renders a
+// time-entry list or filters by employee.
+export function buildUserMap(users: { id: string; name: string }[]): Record<string, string> {
+  return Object.fromEntries(users.map((u) => [u.id, formatNameLastFirst(u.name)]))
+}
+
 // Authoritative "when did this work happen" for a time entry. Prefer workDate
 // (the day work was performed); fall back to createdAt (when the entry was
 // logged) for legacy rows that pre-date the workDate field.

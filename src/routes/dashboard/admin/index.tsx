@@ -1,12 +1,12 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
-import { Users, Clock, CheckCircle, AlertTriangle } from 'lucide-react'
+import { Users, Clock } from 'lucide-react'
 import { getAllUsers } from '#/server/users'
 import { getAllTimeEntries } from '#/server/time-entries'
 import { TimeEntryList } from '#/components/time-tracking/TimeEntryList'
 import { Select } from '#/components/ui/Select'
-import { formatDate, formatHours, formatNameLastFirst } from '#/lib/utils'
+import { buildUserMap, formatDate, formatHours } from '#/lib/utils'
 import type { AppUser, AppTimeEntryWithUser } from '#/lib/types'
 
 export const Route = createFileRoute('/dashboard/admin/')({
@@ -49,11 +49,9 @@ function AdminOverview() {
     })
   }, [entries, weekEnding])
 
-  const pendingEntries = filteredEntries.filter((e) => !e.approved && !e.flagged)
-  const flaggedEntries = filteredEntries.filter((e) => e.flagged)
   const totalHours = filteredEntries.reduce((s, e) => s + e.totalHours, 0)
   const activeEmployeeCount = new Set(filteredEntries.map((e) => e.userId)).size
-  const userMap = Object.fromEntries(users.map((u) => [u.id, formatNameLastFirst(u.name)]))
+  const userMap = buildUserMap(users)
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-6xl">
@@ -79,7 +77,7 @@ function AdminOverview() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 lg:mb-8">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-6 lg:mb-8">
         <StatCard
           label="Active Employees"
           value={String(activeEmployeeCount)}
@@ -89,18 +87,6 @@ function AdminOverview() {
           label="Total Hours Logged"
           value={formatHours(totalHours)}
           icon={<Clock className="w-5 h-5 text-green-600" />}
-        />
-        <StatCard
-          label="Pending Approval"
-          value={String(pendingEntries.length)}
-          icon={<CheckCircle className="w-5 h-5 text-yellow-600" />}
-          highlight={pendingEntries.length > 0}
-        />
-        <StatCard
-          label="Flagged Entries"
-          value={String(flaggedEntries.length)}
-          icon={<AlertTriangle className="w-5 h-5 text-red-600" />}
-          highlight={flaggedEntries.length > 0}
         />
       </div>
 
@@ -117,7 +103,7 @@ function AdminOverview() {
             No time entries{weekEnding ? ' for the selected week' : ''} yet.
           </p>
         ) : (
-          <TimeEntryList entries={filteredEntries} isAdmin showUser userMap={userMap} />
+          <TimeEntryList entries={filteredEntries} showUser userMap={userMap} />
         )}
       </div>
     </div>
@@ -125,12 +111,12 @@ function AdminOverview() {
 }
 
 function StatCard({
-  label, value, icon, highlight = false,
+  label, value, icon,
 }: {
-  label: string; value: string; icon?: React.ReactNode; highlight?: boolean
+  label: string; value: string; icon?: React.ReactNode
 }) {
   return (
-    <div className={`bg-white rounded-xl border p-5 ${highlight ? 'border-yellow-300 bg-yellow-50' : 'border-gray-200'}`}>
+    <div className="bg-white rounded-xl border border-gray-200 p-5">
       <div className="flex items-center justify-between mb-2">
         <p className="text-sm text-gray-500">{label}</p>
         {icon}

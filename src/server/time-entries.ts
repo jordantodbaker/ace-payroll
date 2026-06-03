@@ -1,11 +1,20 @@
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
+import type { User } from '@prisma/client'
 import { prisma } from '#/lib/prisma'
 import { requireAdmin, requireUser } from '#/server/auth-helpers'
 import { toAppTimeEntry } from '#/server/serialize'
-import { parseWorkDate, payPeriodEndingFor, timeEntryDateRangeWhere, weekEndingFor } from '#/server/date-range'
+import { timeEntryDateRangeWhere } from '#/server/date-range'
+import { parseWorkDate, payPeriodEndingFor, weekEndingFor } from '#/lib/date-utils'
 import { loadPayPeriodConfig } from '#/server/settings'
 import type { AppTimeEntry, AppTimeEntryWithUser, AppTimeEntryWithTask } from '#/lib/types'
+
+// Throws if the user can neither own the entry nor act as admin.
+function assertOwnerOrAdmin(user: User, entry: { userId: string }, action: string): void {
+  if (user.role !== 'ADMIN' && entry.userId !== user.id) {
+    throw new Error(`Cannot ${action} this entry`)
+  }
+}
 
 export const getMyTimeEntries = createServerFn().handler(async (): Promise<AppTimeEntryWithTask[]> => {
   const user = await requireUser()
@@ -88,9 +97,7 @@ export const updateTimeEntry = createServerFn({ method: 'POST' })
     const user = await requireUser()
     const existing = await prisma.timeEntry.findFirst({ where: { id: data.id } })
     if (!existing) throw new Error('Entry not found')
-    if (user.role !== 'ADMIN' && (existing.userId !== user.id || existing.approved)) {
-      throw new Error('Cannot edit this entry')
-    }
+    assertOwnerOrAdmin(user, existing, 'edit')
     const newWorkDate = data.workDate ? parseWorkDate(data.workDate) : undefined
     // Recompute weekEnding + payPeriodEnding only when workDate actually
     // changed, to avoid overwriting manually-set values (e.g. seeded data).
@@ -122,36 +129,7 @@ export const deleteTimeEntry = createServerFn({ method: 'POST' })
     const user = await requireUser()
     const entry = await prisma.timeEntry.findFirst({ where: { id: data.id } })
     if (!entry) throw new Error('Entry not found')
-    if (user.role !== 'ADMIN' && (entry.userId !== user.id || entry.approved)) {
-      throw new Error('Cannot delete this entry')
-    }
+    assertOwnerOrAdmin(user, entry, 'delete')
     await prisma.timeEntry.delete({ where: { id: data.id } })
     return { success: true }
-  })
-
-export const approveTimeEntry = createServerFn({ method: 'POST' })
-  .inputValidator(z.object({ id: z.string(), approved: z.boolean() }))
-  .handler(async ({ data }): Promise<AppTimeEntry> => {
-    await requireAdmin()
-    const entry = await prisma.timeEntry.update({ where: { id: data.id }, data: { approved: data.approved } })
-    return toAppTimeEntry(entry)
-  })
-
-export const approveAllTimeEntries = createServerFn({ method: 'POST' })
-  .inputValidator(z.object({ ids: z.array(z.string()).min(1) }))
-  .handler(async ({ data }): Promise<{ count: number }> => {
-    await requireAdmin()
-    const result = await prisma.timeEntry.updateMany({
-      where: { id: { in: data.ids }, approved: false },
-      data: { approved: true },
-    })
-    return { count: result.count }
-  })
-
-export const flagTimeEntry = createServerFn({ method: 'POST' })
-  .inputValidator(z.object({ id: z.string(), flagged: z.boolean() }))
-  .handler(async ({ data }): Promise<AppTimeEntry> => {
-    await requireAdmin()
-    const entry = await prisma.timeEntry.update({ where: { id: data.id }, data: { flagged: data.flagged } })
-    return toAppTimeEntry(entry)
   })

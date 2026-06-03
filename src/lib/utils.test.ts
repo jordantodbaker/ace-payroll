@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cn, entryDate, formatDate, formatHours, formatNameLastFirst } from './utils'
+import { buildUserMap, cn, entryDate, formatDate, formatHours, formatNameLastFirst } from './utils'
 
 describe('cn', () => {
   it('joins string classes with a space', () => {
@@ -60,6 +60,19 @@ describe('formatNameLastFirst', () => {
   })
   it('trims surrounding whitespace', () => {
     expect(formatNameLastFirst('  Pete Allred  ')).toBe('Allred, Pete')
+  })
+})
+
+describe('buildUserMap', () => {
+  it('keys by id and formats names Last-First', () => {
+    const map = buildUserMap([
+      { id: 'u1', name: 'Pete Allred' },
+      { id: 'u2', name: 'Jordan Baker' },
+    ])
+    expect(map).toEqual({ u1: 'Allred, Pete', u2: 'Baker, Jordan' })
+  })
+  it('returns an empty object for an empty list', () => {
+    expect(buildUserMap([])).toEqual({})
   })
 })
 

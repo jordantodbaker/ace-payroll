@@ -1,22 +1,20 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Pencil, Trash2, Flag, CheckCircle } from 'lucide-react'
+import { Pencil, Trash2 } from 'lucide-react'
 import { Button } from '#/components/ui/Button'
-import { Badge } from '#/components/ui/Badge'
 import { Modal } from '#/components/ui/Modal'
 import { TimeEntryForm } from '#/components/time-tracking/TimeEntryForm'
-import { deleteTimeEntry, approveTimeEntry, flagTimeEntry } from '#/server/time-entries'
+import { deleteTimeEntry } from '#/server/time-entries'
 import { entryDate, formatDate, formatHours } from '#/lib/utils'
 import type { AppTimeEntry } from '#/lib/types'
 
 interface TimeEntryListProps {
   entries: AppTimeEntry[]
-  isAdmin?: boolean
   showUser?: boolean
   userMap?: Record<string, string>
 }
 
-export function TimeEntryList({ entries, isAdmin = false, showUser = false, userMap = {} }: TimeEntryListProps) {
+export function TimeEntryList({ entries, showUser = false, userMap = {} }: TimeEntryListProps) {
   const qc = useQueryClient()
   const [editing, setEditing] = useState<AppTimeEntry | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
@@ -27,24 +25,6 @@ export function TimeEntryList({ entries, isAdmin = false, showUser = false, user
       qc.invalidateQueries({ queryKey: ['myTimeEntries'] })
       qc.invalidateQueries({ queryKey: ['allTimeEntries'] })
       setConfirmDelete(null)
-    },
-  })
-
-  const approveMutation = useMutation({
-    mutationFn: ({ id, approved }: { id: string; approved: boolean }) =>
-      approveTimeEntry({ data: { id, approved } }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['allTimeEntries'] })
-      qc.invalidateQueries({ queryKey: ['myTimeEntries'] })
-    },
-  })
-
-  const flagMutation = useMutation({
-    mutationFn: ({ id, flagged }: { id: string; flagged: boolean }) =>
-      flagTimeEntry({ data: { id, flagged } }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['allTimeEntries'] })
-      qc.invalidateQueries({ queryKey: ['myTimeEntries'] })
     },
   })
 
@@ -62,7 +42,6 @@ export function TimeEntryList({ entries, isAdmin = false, showUser = false, user
               <th className="pb-3 pr-4">Task</th>
               <th className="pb-3 pr-4">Date</th>
               <th className="pb-3 pr-4">Hours</th>
-              <th className="pb-3 pr-4">Status</th>
               <th className="pb-3">Actions</th>
             </tr>
           </thead>
@@ -79,42 +58,15 @@ export function TimeEntryList({ entries, isAdmin = false, showUser = false, user
                 <td className="py-3 pr-4 tabular-nums text-gray-900">
                   {formatHours(entry.totalHours)}
                 </td>
-                <td className="py-3 pr-4">
-                  <div className="flex gap-1 flex-wrap">
-                    {entry.approved && <Badge variant="green">Approved</Badge>}
-                    {entry.flagged && <Badge variant="red">Flagged</Badge>}
-                    {!entry.approved && !entry.flagged && <Badge variant="gray">Pending</Badge>}
-                  </div>
-                </td>
                 <td className="py-3">
                   <div className="flex items-center gap-1">
-                    {(!entry.approved || isAdmin) && (
-                      <button
-                        onClick={() => setEditing(entry)}
-                        className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-700"
-                        title="Edit"
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </button>
-                    )}
-                    {isAdmin && (
-                      <>
-                        <button
-                          onClick={() => approveMutation.mutate({ id: entry.id, approved: !entry.approved })}
-                          className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-green-600"
-                          title={entry.approved ? 'Unapprove' : 'Approve'}
-                        >
-                          <CheckCircle className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => flagMutation.mutate({ id: entry.id, flagged: !entry.flagged })}
-                          className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-yellow-600"
-                          title={entry.flagged ? 'Unflag' : 'Flag'}
-                        >
-                          <Flag className="w-4 h-4" />
-                        </button>
-                      </>
-                    )}
+                    <button
+                      onClick={() => setEditing(entry)}
+                      className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-700"
+                      title="Edit"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
                     <button
                       onClick={() => setConfirmDelete(entry.id)}
                       className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-red-600"

@@ -9,13 +9,6 @@ export interface TimeEntriesPdfFilters {
   taskName?: string
   poNumber?: string
   poLine?: string
-  status?: string
-}
-
-function statusLabel(entry: AppTimeEntryWithUser): string {
-  if (entry.approved) return 'Approved'
-  if (entry.flagged) return 'Flagged'
-  return 'Pending'
 }
 
 export function exportTimeEntriesPdf(
@@ -40,7 +33,6 @@ export function exportTimeEntriesPdf(
   if (filters.taskName) filterLines.push(`Task: ${filters.taskName}`)
   if (filters.poNumber) filterLines.push(`PO: ${filters.poNumber}`)
   if (filters.poLine) filterLines.push(`PO Line: ${filters.poLine}`)
-  if (filters.status && filters.status !== 'all') filterLines.push(`Status: ${filters.status}`)
   filterLines.push(`Generated: ${formatDate(new Date())}`)
   filterLines.push(`Entries: ${entries.length}`)
 
@@ -56,17 +48,16 @@ export function exportTimeEntriesPdf(
 
   autoTable(doc, {
     startY: y + 4,
-    head: [['Employee', 'Date', 'Week Ending', 'Task', 'Hours', 'Status', 'Description']],
+    head: [['Employee', 'Date', 'Week Ending', 'Task', 'Hours', 'Description']],
     body: entries.map((e) => [
       userMap[e.userId] ?? formatNameLastFirst(e.user?.name) ?? '—',
       formatDate(entryDate(e)),
       e.weekEnding ? formatDate(e.weekEnding) : '—',
       e.taskName,
       formatHours(e.totalHours),
-      statusLabel(e),
       e.workDescription ?? '',
     ]),
-    foot: [['', '', '', 'Total', formatHours(totalHours), '', '']],
+    foot: [['', '', '', 'Total', formatHours(totalHours), '']],
     theme: 'grid',
     headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold', fontSize: 9 },
     footStyles: { fillColor: [243, 244, 246], textColor: 0, fontStyle: 'bold', fontSize: 9 },
@@ -77,8 +68,7 @@ export function exportTimeEntriesPdf(
       2: { cellWidth: 22 },
       3: { cellWidth: 50 },
       4: { cellWidth: 18, halign: 'right' },
-      5: { cellWidth: 20 },
-      6: { cellWidth: 'auto' },
+      5: { cellWidth: 'auto' },
     },
     margin: { left: margin, right: margin },
   })
@@ -86,7 +76,6 @@ export function exportTimeEntriesPdf(
   const filenameSuffix = [
     filters.weekEnding && `week-${filters.weekEnding}`,
     filters.employeeName && `${filters.employeeName.replace(/[,\s]+/g, '-')}`,
-    filters.status && filters.status !== 'all' && filters.status,
   ].filter(Boolean).join('_')
 
   doc.save(`time-entries${filenameSuffix ? `-${filenameSuffix}` : ''}.pdf`)

@@ -16,36 +16,3 @@ function parseLocalDate(yyyymmdd: string): Date {
   const [y, m, d] = yyyymmdd.split('-').map(Number)
   return new Date(y, m - 1, d)
 }
-
-// 'YYYY-MM-DD' from a <input type="date">. Anchor to noon local time so the
-// stored DateTime renders as the same calendar day regardless of viewer TZ.
-export function parseWorkDate(s: string): Date {
-  const [y, m, d] = s.split('-').map(Number)
-  return new Date(y, m - 1, d, 12)
-}
-
-// A "week" is Mon–Sun, so weekEnding is the Sunday on or after the workDate.
-// Sunday workDate maps to itself (it's already the last day of its week).
-export function weekEndingFor(workDate: Date): Date {
-  const sunday = new Date(workDate)
-  const day = sunday.getDay() // 0 = Sun, 6 = Sat
-  const daysUntilSunday = day === 0 ? 0 : 7 - day
-  sunday.setDate(sunday.getDate() + daysUntilSunday)
-  return sunday
-}
-
-const DAY_MS = 86_400_000
-
-// The pay period ending for a workDate, given a known pay-period-end `anchor`
-// date and a period length in `weeks` (bi-weekly = 2). Returns the earliest
-// period-end on or after workDate. Work done on a period-end date belongs to
-// that period. The result keeps the anchor's time-of-day.
-export function payPeriodEndingFor(workDate: Date, anchor: Date, weeks: number): Date {
-  const periodDays = weeks * 7
-  // Whole-day delta; rounding keeps it correct across DST shifts.
-  const days = Math.round((workDate.getTime() - anchor.getTime()) / DAY_MS)
-  const periods = Math.ceil(days / periodDays)
-  const result = new Date(anchor)
-  result.setDate(result.getDate() + periods * periodDays)
-  return result
-}

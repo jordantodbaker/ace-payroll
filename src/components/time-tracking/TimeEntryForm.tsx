@@ -6,19 +6,13 @@ import { Select } from '#/components/ui/Select'
 import { createTimeEntry, updateTimeEntry } from '#/server/time-entries'
 import { getTasks } from '#/server/tasks'
 import { entryDate } from '#/lib/utils'
+import { toInputDate } from '#/lib/date-utils'
 import type { AppTask, AppTimeEntry } from '#/lib/types'
 
 interface TimeEntryFormProps {
   entry?: AppTimeEntry
   onSuccess: () => void
   onCancel: () => void
-}
-
-function toInputDate(d: Date): string {
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
 }
 
 export function TimeEntryForm({ entry, onSuccess, onCancel }: TimeEntryFormProps) {
@@ -36,7 +30,13 @@ export function TimeEntryForm({ entry, onSuccess, onCancel }: TimeEntryFormProps
   const { data: tasks = [] } = useQuery<AppTask[]>({ queryKey: ['tasks'], queryFn: () => getTasks() })
 
   const selectedTask = tasks.find((t) => t.id === taskId)
-  const taskName = taskId === '__custom' ? customTask : (entry?.taskName ?? selectedTask?.name ?? '')
+  // Prefer the dropdown's currently-selected task name, so changing the task
+  // on an edit actually updates the saved taskName. Fall back to the entry's
+  // stored taskName only when the selected task isn't in the list (e.g. it
+  // was deactivated since the entry was created).
+  const taskName = taskId === '__custom'
+    ? customTask
+    : (selectedTask?.name ?? entry?.taskName ?? '')
   const hoursNumber = parseFloat(hours)
 
   const invalidate = () => {

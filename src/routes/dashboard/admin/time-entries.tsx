@@ -1,22 +1,18 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
-import { CheckCircle, Download, FileText } from 'lucide-react'
-import { approveAllTimeEntries, getAllTimeEntries } from '#/server/time-entries'
+import { Download, FileText } from 'lucide-react'
+import { getAllTimeEntries } from '#/server/time-entries'
 import { getAllUsers } from '#/server/users'
 import { TimeEntryList } from '#/components/time-tracking/TimeEntryList'
 import { Select } from '#/components/ui/Select'
 import { Button } from '#/components/ui/Button'
-import { Modal } from '#/components/ui/Modal'
-import { downloadCsv, entryDate, formatDate, formatHours, formatNameLastFirst } from '#/lib/utils'
-import { exportTimeEntriesPdf } from '#/lib/timeEntriesPdf'
+import { buildUserMap, downloadCsv, entryDate, formatDate, formatHours, formatNameLastFirst } from '#/lib/utils'
 import type { AppUser, AppTimeEntryWithUser } from '#/lib/types'
 
 export const Route = createFileRoute('/dashboard/admin/time-entries')({
   component: AllTimeEntriesPage,
 })
-
-type StatusFilter = 'all' | 'pending' | 'approved' | 'flagged'
 
 const NO_WEEK = '__none__'
 const NO_PO = '__none__'
@@ -27,10 +23,7 @@ function AllTimeEntriesPage() {
   const [taskName, setTaskName] = useState('')
   const [poNumber, setPoNumber] = useState('')
   const [poLine, setPoLine] = useState('')
-  const [status, setStatus] = useState<StatusFilter>('all')
-  const [confirmApproveAll, setConfirmApproveAll] = useState(false)
-
-  const qc = useQueryClient()
+  const [pdfPending, setPdfPending] = useState(false)
 
   const { data: entries = [], isLoading } = useQuery<AppTimeEntryWithUser[]>({
     queryKey: ['allTimeEntries', 'full'],
@@ -42,10 +35,7 @@ function AllTimeEntriesPage() {
     queryFn: () => getAllUsers(),
   })
 
-  const userMap = useMemo(
-    () => Object.fromEntries(users.map((u) => [u.id, formatNameLastFirst(u.name)])),
-    [users],
-  )
+  const userMap = useMemo(() => buildUserMap(users), [users])
 
   // Filter options derived from the loaded entries so the dropdowns only show
   // values that actually appear in the data. Avoids dead options like "filter by
@@ -118,38 +108,19 @@ function AllTimeEntriesPage() {
         } else if (e.task?.poNumber !== poNumber) return false
       }
       if (poLine && e.task?.poLine !== poLine) return false
-      if (status === 'approved' && !e.approved) return false
-      if (status === 'flagged' && !e.flagged) return false
-      if (status === 'pending' && (e.approved || e.flagged)) return false
       return true
     })
-  }, [entries, userId, taskName, weekEnding, poNumber, poLine, status])
+  }, [entries, userId, taskName, weekEnding, poNumber, poLine])
 
   const totalHours = useMemo(
     () => filtered.reduce((s, e) => s + e.totalHours, 0),
     [filtered],
   )
 
-  // "Pending" = neither approved nor flagged. Approve All acts only on the
-  // pending entries within the current filtered view.
-  const pendingEntries = useMemo(
-    () => filtered.filter((e) => !e.approved && !e.flagged),
-    [filtered],
-  )
-
-  const approveAllMutation = useMutation({
-    mutationFn: (ids: string[]) => approveAllTimeEntries({ data: { ids } }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['allTimeEntries'] })
-      qc.invalidateQueries({ queryKey: ['myTimeEntries'] })
-      setConfirmApproveAll(false)
-    },
-  })
-
-  const activeFilters = !!(userId || taskName || weekEnding || poNumber || poLine || status !== 'all')
+  const activeFilters = !!(userId || taskName || weekEnding || poNumber || poLine)
 
   function clearFilters() {
-    setWeekEnding(''); setUserId(''); setTaskName(''); setPoNumber(''); setPoLine(''); setStatus('all')
+    setWeekEnding(''); setUserId(''); setTaskName(''); setPoNumber(''); setPoLine('')
   }
 
   // Changing PO invalidates any PO Line that doesn't belong to it — clear it
@@ -166,7 +137,6 @@ function AllTimeEntriesPage() {
     taskName: taskName || undefined,
     poNumber: poNumber === NO_PO ? '(no PO)' : poNumber || undefined,
     poLine: poLine || undefined,
-    status: status !== 'all' ? status : undefined,
   }
 
   function handleExportCsv() {
@@ -184,14 +154,20 @@ function AllTimeEntriesPage() {
     const suffix = [
       exportFilters.weekEnding && `week-${weekEnding}`,
       exportFilters.employeeName && exportFilters.employeeName.replace(/[,\s]+/g, '-'),
-      exportFilters.status,
     ].filter(Boolean).join('_')
     downloadCsv(`time-entries${suffix ? `-${suffix}` : ''}.csv`, rows)
   }
 
-  function handleExportPdf() {
+  async function handleExportPdf() {
     if (filtered.length === 0) return
-    exportTimeEntriesPdf(filtered, userMap, exportFilters)
+    setPdfPending(true)
+    try {
+      // jspdf is ~250KB; only pay for it when an admin actually exports a PDF.
+      const { exportTimeEntriesPdf } = await import('#/lib/timeEntriesPdf')
+      exportTimeEntriesPdf(filtered, userMap, exportFilters)
+    } finally {
+      setPdfPending(false)
+    }
   }
 
   const canExport = !isLoading && filtered.length > 0
@@ -215,21 +191,12 @@ function AllTimeEntriesPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button
-            onClick={() => setConfirmApproveAll(true)}
-            disabled={isLoading || pendingEntries.length === 0}
-          >
-            <CheckCircle className="w-4 h-4" />
-            <span className="hidden sm:inline">Approve All</span>
-            <span className="sm:hidden">Approve</span>
-            {pendingEntries.length > 0 && ` (${pendingEntries.length})`}
-          </Button>
           <Button variant="secondary" onClick={handleExportCsv} disabled={!canExport}>
             <Download className="w-4 h-4" />
             <span className="hidden sm:inline">Export CSV</span>
             <span className="sm:hidden">CSV</span>
           </Button>
-          <Button variant="secondary" onClick={handleExportPdf} disabled={!canExport}>
+          <Button variant="secondary" onClick={handleExportPdf} loading={pdfPending} disabled={!canExport}>
             <FileText className="w-4 h-4" />
             <span className="hidden sm:inline">Export PDF</span>
             <span className="sm:hidden">PDF</span>
@@ -271,12 +238,6 @@ function AllTimeEntriesPage() {
               <option key={p} value={p}>{p}</option>
             ))}
           </Select>
-          <Select label="Status" value={status} onChange={(e) => setStatus(e.target.value as StatusFilter)}>
-            <option value="all">All statuses</option>
-            <option value="pending">Pending</option>
-            <option value="approved">Approved</option>
-            <option value="flagged">Flagged</option>
-          </Select>
         </div>
         {activeFilters && (
           <div className="mt-3 flex justify-end">
@@ -295,30 +256,9 @@ function AllTimeEntriesPage() {
             {entries.length === 0 ? 'No time entries yet.' : 'No entries match the selected filters.'}
           </p>
         ) : (
-          <TimeEntryList entries={filtered} isAdmin showUser userMap={userMap} />
+          <TimeEntryList entries={filtered} showUser userMap={userMap} />
         )}
       </div>
-
-      <Modal
-        open={confirmApproveAll}
-        onClose={() => setConfirmApproveAll(false)}
-        title="Approve All Pending Entries"
-        size="sm"
-      >
-        <p className="text-sm text-gray-600 mb-4">
-          Approve {pendingEntries.length} pending {pendingEntries.length === 1 ? 'entry' : 'entries'}
-          {activeFilters ? ' matching the current filters' : ''}? This marks each one as approved.
-        </p>
-        <div className="flex gap-2 justify-end">
-          <Button variant="secondary" onClick={() => setConfirmApproveAll(false)}>Cancel</Button>
-          <Button
-            loading={approveAllMutation.isPending}
-            onClick={() => approveAllMutation.mutate(pendingEntries.map((e) => e.id))}
-          >
-            Approve All
-          </Button>
-        </div>
-      </Modal>
     </div>
   )
 }

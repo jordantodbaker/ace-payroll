@@ -36,8 +36,6 @@ export interface AppTimeEntry {
   workDate: Date | null
   totalHours: number
   workDescription: string | null
-  approved: boolean
-  flagged: boolean
   createdAt: Date
 }
 
