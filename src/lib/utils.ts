@@ -19,10 +19,41 @@ export function formatNameLastFirst(name: string | null | undefined): string {
   return `${last}, ${first}`
 }
 
+// Display a user as "Last, First" — the app-wide name format. Precedence:
+//   1. structured firstName + lastName (whichever subset is present)
+//   2. legacy `name` field, comma-flipped via formatNameLastFirst
+//   3. email as last-resort identifier
+//
+// Used everywhere a user is rendered: tables, dropdowns, CSV/PDF exports.
+export function displayName(
+  user: {
+    firstName?: string | null
+    lastName?: string | null
+    name?: string | null
+    email?: string | null
+  },
+): string {
+  const first = user.firstName?.trim() || ''
+  const last = user.lastName?.trim() || ''
+  if (first && last) return `${last}, ${first}`
+  if (last) return last
+  if (first) return first
+  if (user.name?.trim()) return formatNameLastFirst(user.name)
+  return user.email ?? ''
+}
+
 // Build the userId → display-name map used by every page that renders a
 // time-entry list or filters by employee.
-export function buildUserMap(users: { id: string; name: string }[]): Record<string, string> {
-  return Object.fromEntries(users.map((u) => [u.id, formatNameLastFirst(u.name)]))
+export function buildUserMap(
+  users: {
+    id: string
+    name: string
+    firstName?: string | null
+    lastName?: string | null
+    email?: string | null
+  }[],
+): Record<string, string> {
+  return Object.fromEntries(users.map((u) => [u.id, displayName(u)]))
 }
 
 // Authoritative "when did this work happen" for a time entry. Prefer workDate

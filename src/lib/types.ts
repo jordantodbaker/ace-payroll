@@ -6,6 +6,8 @@ export interface AppUser {
   id: string
   clerkId: string
   name: string
+  firstName: string | null
+  lastName: string | null
   email: string
   role: UserRole
   createdAt: Date

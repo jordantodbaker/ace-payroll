@@ -31,7 +31,7 @@ function DashboardLayout() {
 
   return (
     <div className="min-h-screen">
-      <Sidebar role={user.role} open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar user={user} open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* Mobile top bar — hidden on lg+ where the sidebar is permanent */}
       <header className="lg:hidden sticky top-0 z-30 flex items-center justify-between gap-2 bg-white border-b border-gray-200 px-4 py-3">

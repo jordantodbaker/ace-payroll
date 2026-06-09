@@ -31,7 +31,7 @@ vi.mock('#/server/auth-helpers', () => ({
 import { prisma } from '#/lib/prisma'
 import { clerkClient } from '@clerk/tanstack-react-start/server'
 import { requireAdmin, requireClerkUserId } from '#/server/auth-helpers'
-import { deleteUser, syncUser, updateUserRole } from './users'
+import { deleteUser, syncUser, updateUserName, updateUserRole } from './users'
 
 const prismaMock = prisma as unknown as DeepMockProxy<PrismaClient>
 const getUserMock = vi.mocked(clerkClient().users.getUser)
@@ -44,6 +44,8 @@ function makeUser(overrides: Partial<User> = {}): User {
     id: 'u1',
     clerkId: 'clerk_u1',
     name: 'Alice',
+    firstName: null,
+    lastName: null,
     email: 'alice@example.com',
     role: 'EMPLOYEE',
     createdAt: new Date('2026-01-01'),
@@ -67,14 +69,14 @@ beforeEach(() => {
 // ---------------------------------------------------------------------------
 
 describe('syncUser', () => {
-  it('returns existing user unchanged when name/email/role already match', async () => {
+  it('returns existing user unchanged when name/email/role/structured-fields already match', async () => {
     requireClerkUserIdMock.mockResolvedValue('clerk_u1')
     getUserMock.mockResolvedValue({
       emailAddresses: [{ emailAddress: 'alice@example.com' }],
       firstName: 'Alice',
       lastName: null,
     } as never)
-    const existing = makeUser({ name: 'Alice', email: 'alice@example.com' })
+    const existing = makeUser({ name: 'Alice', email: 'alice@example.com', firstName: 'Alice' })
     prismaMock.user.findUnique.mockResolvedValue(existing)
 
     const result = await (syncUser as () => Promise<User>)()
@@ -82,6 +84,55 @@ describe('syncUser', () => {
     expect(prismaMock.user.update).not.toHaveBeenCalled()
     expect(prismaMock.user.create).not.toHaveBeenCalled()
     expect(result.id).toBe('u1')
+  })
+
+  it('backfills firstName/lastName from Clerk when DB still has nulls', async () => {
+    requireClerkUserIdMock.mockResolvedValue('clerk_u1')
+    getUserMock.mockResolvedValue({
+      emailAddresses: [{ emailAddress: 'alice@example.com' }],
+      firstName: 'Alice',
+      lastName: 'Wonderland',
+    } as never)
+    // Existing row has matching name + email + role, but no structured fields yet.
+    prismaMock.user.findUnique.mockResolvedValue(makeUser({
+      name: 'Alice Wonderland',
+      firstName: null,
+      lastName: null,
+    }))
+    prismaMock.user.update.mockResolvedValue(makeUser({ firstName: 'Alice', lastName: 'Wonderland' }))
+
+    await (syncUser as () => Promise<User>)()
+
+    expect(prismaMock.user.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ firstName: 'Alice', lastName: 'Wonderland' }),
+      }),
+    )
+  })
+
+  it('does NOT clobber admin-edited firstName/lastName on subsequent syncs', async () => {
+    requireClerkUserIdMock.mockResolvedValue('clerk_u1')
+    getUserMock.mockResolvedValue({
+      emailAddresses: [{ emailAddress: 'alice@example.com' }],
+      firstName: 'Clerk Says Alice',
+      lastName: 'Clerk Says Smith',
+    } as never)
+    // Admin already set firstName/lastName. Clerk's values must not overwrite them.
+    prismaMock.user.findUnique.mockResolvedValue(makeUser({
+      name: 'Admin Edited',
+      firstName: 'Admin Edited First',
+      lastName: 'Admin Edited Last',
+    }))
+
+    await (syncUser as () => Promise<User>)()
+
+    // Sync may update `name` but the structured fields stay.
+    const updateCalls = prismaMock.user.update.mock.calls
+    for (const call of updateCalls) {
+      const data = call[0]?.data as { firstName?: string | null; lastName?: string | null } | undefined
+      if (data?.firstName !== undefined) expect(data.firstName).toBe('Admin Edited First')
+      if (data?.lastName !== undefined) expect(data.lastName).toBe('Admin Edited Last')
+    }
   })
 
   it('updates the existing user when name has changed', async () => {
@@ -234,5 +285,65 @@ describe('deleteUser', () => {
     })
     expect(result).toEqual({ success: true })
     expect(prismaMock.user.delete).toHaveBeenCalledWith({ where: { id: 'emp' } })
+  })
+})
+
+describe('updateUserName', () => {
+  it('sets firstName + lastName and rebuilds the legacy name field', async () => {
+    requireAdminMock.mockResolvedValue(makeUser({ role: 'ADMIN' }))
+    prismaMock.user.findUnique.mockResolvedValue(makeUser({ id: 'u1', name: 'Old Name' }))
+    prismaMock.user.update.mockResolvedValue(makeUser({ id: 'u1', firstName: 'Pete', lastName: 'Allred', name: 'Pete Allred' }))
+
+    await (updateUserName as unknown as (i: { data: { userId: string; firstName?: string; lastName?: string } }) => Promise<unknown>)({
+      data: { userId: 'u1', firstName: 'Pete', lastName: 'Allred' },
+    })
+
+    expect(prismaMock.user.update).toHaveBeenCalledWith({
+      where: { id: 'u1' },
+      data: { firstName: 'Pete', lastName: 'Allred', name: 'Pete Allred' },
+    })
+  })
+
+  it('trims whitespace and stores nulls when fields are blank', async () => {
+    requireAdminMock.mockResolvedValue(makeUser({ role: 'ADMIN' }))
+    prismaMock.user.findUnique.mockResolvedValue(makeUser({ id: 'u1', name: 'Existing Name' }))
+    prismaMock.user.update.mockResolvedValue(makeUser({ id: 'u1' }))
+
+    await (updateUserName as unknown as (i: { data: { userId: string; firstName?: string; lastName?: string } }) => Promise<unknown>)({
+      data: { userId: 'u1', firstName: '  ', lastName: '' },
+    })
+
+    expect(prismaMock.user.update).toHaveBeenCalledWith({
+      where: { id: 'u1' },
+      // Both blank → null. Legacy name falls back to the existing value.
+      data: { firstName: null, lastName: null, name: 'Existing Name' },
+    })
+  })
+
+  it('preserves the existing legacy name when both structured fields are blank', async () => {
+    requireAdminMock.mockResolvedValue(makeUser({ role: 'ADMIN' }))
+    prismaMock.user.findUnique.mockResolvedValue(makeUser({ id: 'u1', name: 'pete@example.com' }))
+    prismaMock.user.update.mockResolvedValue(makeUser({ id: 'u1' }))
+
+    await (updateUserName as unknown as (i: { data: { userId: string; firstName?: string; lastName?: string } }) => Promise<unknown>)({
+      data: { userId: 'u1' },
+    })
+
+    expect(prismaMock.user.update).toHaveBeenCalledWith({
+      where: { id: 'u1' },
+      data: { firstName: null, lastName: null, name: 'pete@example.com' },
+    })
+  })
+
+  it('throws when the target user does not exist', async () => {
+    requireAdminMock.mockResolvedValue(makeUser({ role: 'ADMIN' }))
+    prismaMock.user.findUnique.mockResolvedValue(null)
+
+    await expect(
+      (updateUserName as unknown as (i: { data: { userId: string; firstName?: string } }) => Promise<unknown>)({
+        data: { userId: 'missing', firstName: 'Pete' },
+      }),
+    ).rejects.toThrow(/user not found/i)
+    expect(prismaMock.user.update).not.toHaveBeenCalled()
   })
 })

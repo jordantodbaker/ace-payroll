@@ -17,7 +17,9 @@ export const syncUser = createServerFn({ method: 'POST' }).handler(async (): Pro
   const clerk = clerkClient()
   const clerkUser = await clerk.users.getUser(clerkId)
   const email = clerkUser.emailAddresses[0]?.emailAddress ?? ''
-  const name = [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(' ') || email
+  const clerkFirst = clerkUser.firstName ?? null
+  const clerkLast = clerkUser.lastName ?? null
+  const name = [clerkFirst, clerkLast].filter(Boolean).join(' ') || email
 
   // ADMIN_EMAILS is authoritative: any email listed there is ADMIN on every
   // sync, regardless of what the DB currently says. This prevents accidental
@@ -26,19 +28,31 @@ export const syncUser = createServerFn({ method: 'POST' }).handler(async (): Pro
   const adminEmails = getAdminEmails()
   const isListedAdmin = adminEmails.includes(email.toLowerCase())
 
+  // firstName/lastName: only backfill when DB still has nulls. Once an admin
+  // sets them via the Settings UI, we never overwrite with Clerk's values.
+  function structuredBackfill(current: { firstName: string | null; lastName: string | null }) {
+    return {
+      firstName: current.firstName ?? clerkFirst,
+      lastName: current.lastName ?? clerkLast,
+    }
+  }
+
   const existing = await prisma.user.findUnique({ where: { clerkId } })
   if (existing) {
     const targetRole = isListedAdmin ? 'ADMIN' : existing.role
+    const backfill = structuredBackfill(existing)
     if (
       existing.name === name &&
       existing.email === email &&
-      existing.role === targetRole
+      existing.role === targetRole &&
+      existing.firstName === backfill.firstName &&
+      existing.lastName === backfill.lastName
     ) {
       return toAppUser(existing)
     }
     const updated = await prisma.user.update({
       where: { clerkId },
-      data: { name, email, role: targetRole },
+      data: { name, email, role: targetRole, ...backfill },
     })
     return toAppUser(updated)
   }
@@ -49,16 +63,17 @@ export const syncUser = createServerFn({ method: 'POST' }).handler(async (): Pro
   const byEmail = await prisma.user.findUnique({ where: { email } })
   if (byEmail) {
     const targetRole = isListedAdmin ? 'ADMIN' : byEmail.role
+    const backfill = structuredBackfill(byEmail)
     const updated = await prisma.user.update({
       where: { id: byEmail.id },
-      data: { clerkId, name, role: targetRole },
+      data: { clerkId, name, role: targetRole, ...backfill },
     })
     return toAppUser(updated)
   }
 
   const role = isListedAdmin ? 'ADMIN' : 'EMPLOYEE'
   const created = await prisma.user.create({
-    data: { clerkId, name, email, role },
+    data: { clerkId, name, email, role, firstName: clerkFirst, lastName: clerkLast },
   })
   return toAppUser(created)
 })
@@ -74,9 +89,41 @@ export const getMe = createServerFn().handler(async (): Promise<AppUser | null> 
 
 export const getAllUsers = createServerFn().handler(async (): Promise<AppUser[]> => {
   await requireAdmin()
-  const users = await prisma.user.findMany({ orderBy: { name: 'asc' } })
+  // Sort by lastName then firstName so the displayed "Last, First" list reads
+  // alphabetically. Users without a lastName fall back to `name`.
+  const users = await prisma.user.findMany({
+    orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }, { name: 'asc' }],
+  })
   return users.map(toAppUser)
 })
+
+export const updateUserName = createServerFn({ method: 'POST' })
+  .inputValidator(z.object({
+    userId: z.string(),
+    firstName: z.string().max(100).optional(),
+    lastName: z.string().max(100).optional(),
+  }))
+  .handler(async ({ data }): Promise<AppUser> => {
+    await requireAdmin()
+    const firstName = data.firstName?.trim() || null
+    const lastName = data.lastName?.trim() || null
+    // Keep the legacy `name` field in sync with the structured fields so any
+    // callsite that still reads `name` (e.g. Clerk-bound Sidebar) shows the
+    // admin-edited value too. Falls back to the existing name when both are
+    // cleared.
+    const existing = await prisma.user.findUnique({ where: { id: data.userId } })
+    if (!existing) throw new Error('User not found')
+    const combined = [firstName, lastName].filter(Boolean).join(' ')
+    const updated = await prisma.user.update({
+      where: { id: data.userId },
+      data: {
+        firstName,
+        lastName,
+        name: combined || existing.name,
+      },
+    })
+    return toAppUser(updated)
+  })
 
 export const updateUserRole = createServerFn({ method: 'POST' })
   .inputValidator(z.object({ userId: z.string(), role: z.enum(['ADMIN', 'EMPLOYEE']) }))

@@ -2,11 +2,12 @@ import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Pencil, Trash2, ShieldCheck, User as UserIcon } from 'lucide-react'
 import { Button } from '#/components/ui/Button'
+import { Input } from '#/components/ui/Input'
 import { Select } from '#/components/ui/Select'
 import { Badge } from '#/components/ui/Badge'
 import { Modal } from '#/components/ui/Modal'
-import { updateUserRole, deleteUser } from '#/server/users'
-import { formatDate, formatNameLastFirst } from '#/lib/utils'
+import { updateUserRole, updateUserName, deleteUser } from '#/server/users'
+import { displayName, formatDate } from '#/lib/utils'
 import type { AppUser } from '#/lib/types'
 
 interface EmployeeTableProps {
@@ -18,22 +19,43 @@ export function EmployeeTable({ employees, currentUserId }: EmployeeTableProps) 
   const qc = useQueryClient()
   const [editing, setEditing] = useState<AppUser | null>(null)
   const [newRole, setNewRole] = useState<'ADMIN' | 'EMPLOYEE'>('EMPLOYEE')
+  const [newFirst, setNewFirst] = useState('')
+  const [newLast, setNewLast] = useState('')
   const [confirmDelete, setConfirmDelete] = useState<AppUser | null>(null)
 
   function openEdit(emp: AppUser) {
     setEditing(emp)
     setNewRole(emp.role)
+    setNewFirst(emp.firstName ?? '')
+    setNewLast(emp.lastName ?? '')
   }
 
   const updateMutation = useMutation({
     mutationFn: async () => {
       if (!editing) return
-      if (newRole !== editing.role) {
-        await updateUserRole({ data: { userId: editing.id, role: newRole } })
+      const tasks: Promise<unknown>[] = []
+      const trimmedFirst = newFirst.trim()
+      const trimmedLast = newLast.trim()
+      if (trimmedFirst !== (editing.firstName ?? '') || trimmedLast !== (editing.lastName ?? '')) {
+        tasks.push(updateUserName({
+          data: {
+            userId: editing.id,
+            firstName: trimmedFirst || undefined,
+            lastName: trimmedLast || undefined,
+          },
+        }))
       }
+      if (newRole !== editing.role) {
+        tasks.push(updateUserRole({ data: { userId: editing.id, role: newRole } }))
+      }
+      await Promise.all(tasks)
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['allUsers'] })
+      // Name displays everywhere derive from the same user map, so any list
+      // that shows an employee's name is now stale.
+      qc.invalidateQueries({ queryKey: ['allTimeEntries'] })
+      qc.invalidateQueries({ queryKey: ['myTimeEntries'] })
       setEditing(null)
     },
   })
@@ -69,7 +91,7 @@ export function EmployeeTable({ employees, currentUserId }: EmployeeTableProps) 
                     ) : (
                       <UserIcon className="w-4 h-4 text-gray-400" />
                     )}
-                    <span className="font-medium text-gray-900">{formatNameLastFirst(emp.name)}</span>
+                    <span className="font-medium text-gray-900">{displayName(emp)}</span>
                     {emp.id === currentUserId && <Badge variant="blue">You</Badge>}
                   </div>
                 </td>
@@ -107,8 +129,22 @@ export function EmployeeTable({ employees, currentUserId }: EmployeeTableProps) 
       <Modal open={!!editing} onClose={() => setEditing(null)} title="Edit Employee">
         <div className="space-y-4">
           <div>
-            <p className="text-sm text-gray-500">Employee</p>
-            <p className="font-medium">{formatNameLastFirst(editing?.name)}</p>
+            <p className="text-sm text-gray-500">Email</p>
+            <p className="font-medium text-gray-900">{editing?.email}</p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Input
+              label="First name"
+              value={newFirst}
+              onChange={(e) => setNewFirst(e.target.value)}
+              placeholder="First"
+            />
+            <Input
+              label="Last name"
+              value={newLast}
+              onChange={(e) => setNewLast(e.target.value)}
+              placeholder="Last"
+            />
           </div>
           <Select
             label="Role"
@@ -132,7 +168,7 @@ export function EmployeeTable({ employees, currentUserId }: EmployeeTableProps) 
 
       <Modal open={!!confirmDelete} onClose={() => setConfirmDelete(null)} title="Remove Employee" size="sm">
         <p className="text-sm text-gray-600 mb-4">
-          Remove <strong>{formatNameLastFirst(confirmDelete?.name)}</strong>? This will delete all their time entries.
+          Remove <strong>{confirmDelete && displayName(confirmDelete)}</strong>? This will delete all their time entries.
         </p>
         <div className="flex gap-2 justify-end">
           <Button variant="secondary" onClick={() => setConfirmDelete(null)}>Cancel</Button>

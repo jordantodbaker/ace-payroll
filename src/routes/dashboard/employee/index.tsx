@@ -9,7 +9,7 @@ import { Button } from '#/components/ui/Button'
 import { getMyTimeEntries } from '#/server/time-entries'
 import { entryDate, formatHours } from '#/lib/utils'
 import type { AppTimeEntryWithTask } from '#/lib/types'
-import { format, startOfMonth, endOfMonth } from 'date-fns'
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, subWeeks } from 'date-fns'
 
 export const Route = createFileRoute('/dashboard/employee/')({ component: EmployeeDashboard })
 
@@ -24,6 +24,13 @@ function EmployeeDashboard() {
     queryFn: () => getMyTimeEntries(),
   })
 
+  // Week boundaries are Mon–Sun, matching how `weekEndingFor` defines a week.
+  const thisWeekStart = startOfWeek(now, { weekStartsOn: 1 })
+  const thisWeekEnd = endOfWeek(now, { weekStartsOn: 1 })
+  const lastWeekRef = subWeeks(now, 1)
+  const lastWeekStart = startOfWeek(lastWeekRef, { weekStartsOn: 1 })
+  const lastWeekEnd = endOfWeek(lastWeekRef, { weekStartsOn: 1 })
+
   const monthEntries = entries.filter((e) => {
     const date = entryDate(e)
     return date >= monthStart && date <= monthEnd
@@ -31,7 +38,15 @@ function EmployeeDashboard() {
   const sortedMonthEntries = [...monthEntries].sort(
     (a, b) => entryDate(b).getTime() - entryDate(a).getTime(),
   )
-  const monthHours = monthEntries.reduce((s, e) => s + e.totalHours, 0)
+
+  const thisWeekHours = entries.reduce((s, e) => {
+    const d = entryDate(e)
+    return d >= thisWeekStart && d <= thisWeekEnd ? s + e.totalHours : s
+  }, 0)
+  const lastWeekEntryCount = entries.filter((e) => {
+    const d = entryDate(e)
+    return d >= lastWeekStart && d <= lastWeekEnd
+  }).length
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-5xl">
@@ -49,13 +64,13 @@ function EmployeeDashboard() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6 lg:mb-8">
         <StatCard
-          label="Hours This Month"
-          value={formatHours(monthHours)}
+          label="Hours This Week"
+          value={formatHours(thisWeekHours)}
           icon={<TrendingUp className="w-5 h-5 text-indigo-600" />}
         />
         <StatCard
-          label="Entries This Month"
-          value={String(monthEntries.length)}
+          label="Entries Last Week"
+          value={String(lastWeekEntryCount)}
           icon={<Clock className="w-5 h-5 text-indigo-600" />}
         />
       </div>

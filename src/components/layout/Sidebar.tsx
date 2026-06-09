@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { UserButton, useUser } from '@clerk/tanstack-react-start'
+import { UserButton } from '@clerk/tanstack-react-start'
 import {
   Clock,
   LayoutDashboard,
@@ -9,7 +9,8 @@ import {
   ShieldCheck,
   X,
 } from 'lucide-react'
-import { cn, formatNameLastFirst } from '#/lib/utils'
+import { cn, displayName } from '#/lib/utils'
+import type { AppUser } from '#/lib/types'
 
 interface NavItem {
   to: string
@@ -24,7 +25,7 @@ interface NavSection {
 }
 
 interface SidebarProps {
-  role: 'ADMIN' | 'EMPLOYEE'
+  user: AppUser
   open: boolean
   onClose: () => void
 }
@@ -52,8 +53,8 @@ const employeeNav: NavItem[] = [
   { to: '/dashboard/employee/time-log', label: 'Time Log', icon: <ClipboardList className="w-5 h-5" /> },
 ]
 
-export function Sidebar({ role, open, onClose }: SidebarProps) {
-  const { user } = useUser()
+export function Sidebar({ user, open, onClose }: SidebarProps) {
+  const role = user.role
 
   return (
     <>
@@ -108,7 +109,7 @@ export function Sidebar({ role, open, onClose }: SidebarProps) {
         <div className="px-4 py-4 border-t border-gray-700 flex items-center gap-3">
           <UserButton />
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-white truncate">{formatNameLastFirst(user?.fullName)}</p>
+            <p className="text-sm font-medium text-white truncate">{displayName(user)}</p>
             <div className="flex items-center gap-1">
               {role === 'ADMIN' && <ShieldCheck className="w-3 h-3 text-indigo-400" />}
               <p className={cn('text-xs truncate', role === 'ADMIN' ? 'text-indigo-300' : 'text-gray-400')}>

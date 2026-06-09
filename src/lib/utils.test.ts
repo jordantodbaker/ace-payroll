@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildUserMap, cn, entryDate, formatDate, formatHours, formatNameLastFirst } from './utils'
+import { buildUserMap, cn, displayName, entryDate, formatDate, formatHours, formatNameLastFirst } from './utils'
 
 describe('cn', () => {
   it('joins string classes with a space', () => {
@@ -63,6 +63,32 @@ describe('formatNameLastFirst', () => {
   })
 })
 
+describe('displayName', () => {
+  it('formats Last, First when both structured fields are present', () => {
+    expect(displayName({ firstName: 'Pete', lastName: 'Allred' })).toBe('Allred, Pete')
+  })
+  it('uses only the available structured field when one is missing', () => {
+    expect(displayName({ firstName: 'Pete', lastName: null })).toBe('Pete')
+    expect(displayName({ firstName: null, lastName: 'Allred' })).toBe('Allred')
+  })
+  it('falls back to the legacy name field, comma-flipped', () => {
+    expect(displayName({ firstName: null, lastName: null, name: 'Pete Allred' })).toBe('Allred, Pete')
+  })
+  it('falls back to email when no name fields are set', () => {
+    expect(displayName({ firstName: null, lastName: null, name: null, email: 'pete@example.com' })).toBe('pete@example.com')
+  })
+  it('returns empty string when nothing is provided', () => {
+    expect(displayName({})).toBe('')
+  })
+  it('ignores whitespace-only structured fields', () => {
+    expect(displayName({ firstName: '   ', lastName: '  ', name: 'Pete Allred' })).toBe('Allred, Pete')
+  })
+  it('prefers structured fields over the legacy name field', () => {
+    // Admin edited firstName/lastName; the stored name may not match yet.
+    expect(displayName({ firstName: 'Edited', lastName: 'Name', name: 'Stale Name' })).toBe('Name, Edited')
+  })
+})
+
 describe('buildUserMap', () => {
   it('keys by id and formats names Last-First', () => {
     const map = buildUserMap([
@@ -70,6 +96,12 @@ describe('buildUserMap', () => {
       { id: 'u2', name: 'Jordan Baker' },
     ])
     expect(map).toEqual({ u1: 'Allred, Pete', u2: 'Baker, Jordan' })
+  })
+  it('prefers structured firstName/lastName over the legacy name field', () => {
+    const map = buildUserMap([
+      { id: 'u1', name: 'Stale Name', firstName: 'Pete', lastName: 'Allred' },
+    ])
+    expect(map).toEqual({ u1: 'Allred, Pete' })
   })
   it('returns an empty object for an empty list', () => {
     expect(buildUserMap([])).toEqual({})

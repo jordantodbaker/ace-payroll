@@ -7,7 +7,7 @@ import { getAllUsers } from '#/server/users'
 import { TimeEntryList } from '#/components/time-tracking/TimeEntryList'
 import { Select } from '#/components/ui/Select'
 import { Button } from '#/components/ui/Button'
-import { buildUserMap, downloadCsv, entryDate, formatDate, formatHours, formatNameLastFirst } from '#/lib/utils'
+import { buildUserMap, displayName, downloadCsv, entryDate, formatDate, formatHours, formatNameLastFirst } from '#/lib/utils'
 import type { AppUser, AppTimeEntryWithUser } from '#/lib/types'
 
 export const Route = createFileRoute('/dashboard/admin/time-entries')({
@@ -216,7 +216,7 @@ function AllTimeEntriesPage() {
           <Select label="Employee" value={userId} onChange={(e) => setUserId(e.target.value)}>
             <option value="">All employees</option>
             {userOptions.map((u) => (
-              <option key={u.id} value={u.id}>{formatNameLastFirst(u.name)}</option>
+              <option key={u.id} value={u.id}>{displayName(u)}</option>
             ))}
           </Select>
           <Select label="Task" value={taskName} onChange={(e) => setTaskName(e.target.value)}>
