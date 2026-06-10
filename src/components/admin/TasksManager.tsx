@@ -73,6 +73,7 @@ export function TasksManager() {
   const { data: tasks = [], isLoading } = useQuery<AppTask[]>({
     queryKey: ['allTasks'],
     queryFn: () => getAllTasks(),
+    staleTime: 5 * 60_000,
   })
 
   const invalidate = () => {

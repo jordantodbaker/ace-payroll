@@ -8,8 +8,9 @@ import { Modal } from '#/components/ui/Modal'
 import { Button } from '#/components/ui/Button'
 import { getMyTimeEntries } from '#/server/time-entries'
 import { entryDate, formatHours } from '#/lib/utils'
+import { getThisAndLastWeek } from '#/lib/date-utils'
 import type { AppTimeEntryWithTask } from '#/lib/types'
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, subWeeks } from 'date-fns'
+import { format, startOfMonth, endOfMonth } from 'date-fns'
 
 export const Route = createFileRoute('/dashboard/employee/')({ component: EmployeeDashboard })
 
@@ -24,12 +25,7 @@ function EmployeeDashboard() {
     queryFn: () => getMyTimeEntries(),
   })
 
-  // Week boundaries are Mon–Sun, matching how `weekEndingFor` defines a week.
-  const thisWeekStart = startOfWeek(now, { weekStartsOn: 1 })
-  const thisWeekEnd = endOfWeek(now, { weekStartsOn: 1 })
-  const lastWeekRef = subWeeks(now, 1)
-  const lastWeekStart = startOfWeek(lastWeekRef, { weekStartsOn: 1 })
-  const lastWeekEnd = endOfWeek(lastWeekRef, { weekStartsOn: 1 })
+  const { thisWeekStart, thisWeekEnd, lastWeekStart, lastWeekEnd } = getThisAndLastWeek(now)
 
   const monthEntries = entries.filter((e) => {
     const date = entryDate(e)
@@ -43,10 +39,10 @@ function EmployeeDashboard() {
     const d = entryDate(e)
     return d >= thisWeekStart && d <= thisWeekEnd ? s + e.totalHours : s
   }, 0)
-  const lastWeekEntryCount = entries.filter((e) => {
+  const lastWeekHours = entries.reduce((s, e) => {
     const d = entryDate(e)
-    return d >= lastWeekStart && d <= lastWeekEnd
-  }).length
+    return d >= lastWeekStart && d <= lastWeekEnd ? s + e.totalHours : s
+  }, 0)
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-5xl">
@@ -69,8 +65,8 @@ function EmployeeDashboard() {
           icon={<TrendingUp className="w-5 h-5 text-indigo-600" />}
         />
         <StatCard
-          label="Entries Last Week"
-          value={String(lastWeekEntryCount)}
+          label="Hours Last Week"
+          value={formatHours(lastWeekHours)}
           icon={<Clock className="w-5 h-5 text-indigo-600" />}
         />
       </div>

@@ -27,7 +27,11 @@ export function TimeEntryForm({ entry, onSuccess, onCancel }: TimeEntryFormProps
   const [workDescription, setWorkDescription] = useState(entry?.workDescription ?? '')
   const [error, setError] = useState('')
 
-  const { data: tasks = [] } = useQuery<AppTask[]>({ queryKey: ['tasks'], queryFn: () => getTasks() })
+  const { data: tasks = [] } = useQuery<AppTask[]>({
+    queryKey: ['tasks'],
+    queryFn: () => getTasks(),
+    staleTime: 5 * 60_000,
+  })
 
   const selectedTask = tasks.find((t) => t.id === taskId)
   // Prefer the dropdown's currently-selected task name, so changing the task

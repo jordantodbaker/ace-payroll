@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { parseWorkDate, payPeriodEndingFor, toInputDate, weekEndingFor } from './date-utils'
+import {
+  getThisAndLastWeek,
+  parseWorkDate,
+  payPeriodEndingFor,
+  toInputDate,
+  weekEndingFor,
+  weekEndingKey,
+} from './date-utils'
 
 describe('parseWorkDate', () => {
   it('parses YYYY-MM-DD to a Date anchored at local noon', () => {
@@ -115,5 +122,66 @@ describe('payPeriodEndingFor', () => {
     const before = anchor.getTime()
     payPeriodEndingFor(new Date(2026, 6, 1, 12), anchor, weeks)
     expect(anchor.getTime()).toBe(before)
+  })
+})
+
+describe('getThisAndLastWeek', () => {
+  // 2026-06-09 is a Tuesday. Its Mon–Sun week is 2026-06-08 .. 2026-06-14.
+  // Previous week is 2026-06-01 .. 2026-06-07.
+  const tuesday = new Date(2026, 5, 9, 12)
+
+  it("returns Monday as this week's start", () => {
+    const { thisWeekStart } = getThisAndLastWeek(tuesday)
+    expect(thisWeekStart.getDay()).toBe(1) // Monday
+    expect(thisWeekStart.getDate()).toBe(8)
+  })
+
+  it("returns Sunday as this week's end", () => {
+    const { thisWeekEnd } = getThisAndLastWeek(tuesday)
+    expect(thisWeekEnd.getDay()).toBe(0) // Sunday
+    expect(thisWeekEnd.getDate()).toBe(14)
+  })
+
+  it("places last week's range 7 days before this week's", () => {
+    const { thisWeekStart, lastWeekStart, lastWeekEnd } = getThisAndLastWeek(tuesday)
+    expect(lastWeekStart.getDate()).toBe(1)
+    expect(lastWeekEnd.getDate()).toBe(7)
+    // 7-day shift
+    expect(thisWeekStart.getTime() - lastWeekStart.getTime()).toBe(7 * 86_400_000)
+  })
+
+  it('treats Monday as the same week (it IS the week start)', () => {
+    const monday = new Date(2026, 5, 8, 12)
+    const { thisWeekStart } = getThisAndLastWeek(monday)
+    expect(thisWeekStart.getDate()).toBe(8)
+  })
+
+  it('treats Sunday as still in this week (it IS the week end)', () => {
+    const sunday = new Date(2026, 5, 14, 12)
+    const { thisWeekStart, thisWeekEnd } = getThisAndLastWeek(sunday)
+    expect(thisWeekStart.getDate()).toBe(8)
+    expect(thisWeekEnd.getDate()).toBe(14)
+  })
+})
+
+describe('weekEndingKey', () => {
+  it('returns YYYY-MM-DD for a Date', () => {
+    // ISO slice is UTC; for noon-local dates that stays on the same calendar day.
+    expect(weekEndingKey(new Date(2026, 4, 10, 12))).toMatch(/^2026-05-1[01]$/)
+  })
+
+  it('accepts an ISO string', () => {
+    expect(weekEndingKey('2026-05-10T12:00:00.000Z')).toBe('2026-05-10')
+  })
+
+  it('returns null for null/undefined', () => {
+    expect(weekEndingKey(null)).toBeNull()
+    expect(weekEndingKey(undefined)).toBeNull()
+  })
+
+  it('produces the same key for equal dates (round-trip stable)', () => {
+    const a = weekEndingKey('2026-05-10T12:00:00.000Z')
+    const b = weekEndingKey('2026-05-10T12:00:00.000Z')
+    expect(a).toBe(b)
   })
 })

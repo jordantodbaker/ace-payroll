@@ -13,6 +13,9 @@ export function EmployeesManager({ currentUserId }: EmployeesManagerProps) {
   const { data: users = [], isLoading } = useQuery<AppUser[]>({
     queryKey: ['allUsers'],
     queryFn: () => getAllUsers(),
+    // Mutations invalidate this key explicitly, so we don't need background
+    // refetches every 30s — 5 min keeps Vercel/Neon round-trips down.
+    staleTime: 5 * 60_000,
   })
 
   return (

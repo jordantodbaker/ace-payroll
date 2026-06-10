@@ -1,5 +1,6 @@
 // Pure date helpers — safe to import from both server and client code.
 // (Anything that builds a Prisma where-clause lives in src/server/date-range.ts.)
+import { endOfWeek, startOfWeek, subWeeks } from 'date-fns'
 
 // Bi-weekly pay period anchored on Friday 2026-05-15. Single source of truth
 // for both the seed (initial AppConfig row) and the runtime fallback when no
@@ -47,4 +48,29 @@ export function payPeriodEndingFor(workDate: Date, anchor: Date, weeks: number):
   const result = new Date(anchor)
   result.setDate(result.getDate() + periods * periodDays)
   return result
+}
+
+// Mon–Sun week boundaries for the week containing `now` and the previous week.
+// `weekStartsOn: 1` (Monday) matches the rest of the app's week convention
+// (see weekEndingFor). Used by the personal dashboard and admin overview.
+export function getThisAndLastWeek(now: Date): {
+  thisWeekStart: Date
+  thisWeekEnd: Date
+  lastWeekStart: Date
+  lastWeekEnd: Date
+} {
+  const thisWeekStart = startOfWeek(now, { weekStartsOn: 1 })
+  const thisWeekEnd = endOfWeek(now, { weekStartsOn: 1 })
+  const ref = subWeeks(now, 1)
+  const lastWeekStart = startOfWeek(ref, { weekStartsOn: 1 })
+  const lastWeekEnd = endOfWeek(ref, { weekStartsOn: 1 })
+  return { thisWeekStart, thisWeekEnd, lastWeekStart, lastWeekEnd }
+}
+
+// Normalize a weekEnding Date|string|null into a YYYY-MM-DD bucket key. Used
+// for dropdown option keys and filter matching on the admin pages. Returns
+// null when the input is missing.
+export function weekEndingKey(d: Date | string | null | undefined): string | null {
+  if (!d) return null
+  return new Date(d).toISOString().slice(0, 10)
 }

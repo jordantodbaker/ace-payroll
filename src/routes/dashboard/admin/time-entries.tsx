@@ -8,6 +8,7 @@ import { TimeEntryList } from '#/components/time-tracking/TimeEntryList'
 import { Select } from '#/components/ui/Select'
 import { Button } from '#/components/ui/Button'
 import { buildUserMap, displayName, downloadCsv, entryDate, formatDate, formatHours, formatNameLastFirst } from '#/lib/utils'
+import { weekEndingKey } from '#/lib/date-utils'
 import type { AppUser, AppTimeEntryWithUser } from '#/lib/types'
 
 export const Route = createFileRoute('/dashboard/admin/time-entries')({
@@ -33,6 +34,7 @@ function AllTimeEntriesPage() {
   const { data: users = [] } = useQuery<AppUser[]>({
     queryKey: ['allUsers'],
     queryFn: () => getAllUsers(),
+    staleTime: 5 * 60_000,
   })
 
   const userMap = useMemo(() => buildUserMap(users), [users])
@@ -44,7 +46,8 @@ function AllTimeEntriesPage() {
     const set = new Set<string>()
     let hasNoWeek = false
     for (const e of entries) {
-      if (e.weekEnding) set.add(new Date(e.weekEnding).toISOString().slice(0, 10))
+      const key = weekEndingKey(e.weekEnding)
+      if (key) set.add(key)
       else hasNoWeek = true
     }
     const sorted = [...set].sort().reverse()
@@ -97,9 +100,8 @@ function AllTimeEntriesPage() {
       if (weekEnding) {
         if (weekEnding === NO_WEEK) {
           if (e.weekEnding) return false
-        } else {
-          const we = e.weekEnding ? new Date(e.weekEnding).toISOString().slice(0, 10) : null
-          if (we !== weekEnding) return false
+        } else if (weekEndingKey(e.weekEnding) !== weekEnding) {
+          return false
         }
       }
       if (poNumber) {
